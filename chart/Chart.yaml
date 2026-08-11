@@ -17,7 +17,7 @@ keywords:
 sources:
   - https://github.com/keycloak/keycloak/tree/main/operator
 maintainers:
-  - name: braghettos
+  - name: krateo
 annotations:
   krateo.io/category: security
   krateo.io/maturity: beta
