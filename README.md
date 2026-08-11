@@ -110,7 +110,7 @@ single plain-semver tag (`X.Y.Z`, **no** `v` prefix) matching `chart/Chart.yaml`
 git tag X.Y.Z && git push origin X.Y.Z
 ```
 
-`.github/workflows/release-chart.yaml` lints, verifies the tag matches `Chart.yaml`,
+`.github/workflows/release-tag.yaml` lints, verifies the tag matches `Chart.yaml`,
 packages, and pushes to `oci://ghcr.io/krateo-blueprints/charts/keycloak` — exactly what
 `compositiondefinition.yaml`'s `spec.chart.url` points at. After publishing, bump the
 `CompositionDefinition`'s `spec.chart.version`. `.github/workflows/lint.yaml` runs the
