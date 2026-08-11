@@ -23,8 +23,8 @@ Horizon** (shared Keycloak SSO session — no token bridging).
 
 | Dir | Role | Tech |
 | --- | --- | --- |
-| [`krateo-keycloak-blueprint/`](https://github.com/braghettos/krateo-keycloak-blueprint) | **Lifecycle** — deploy/manage the Keycloak server | Krateo `CompositionDefinition` → chart → official Keycloak Operator (`Keycloak` CR) |
-| [`krateo-keycloak-operator-kog/`](https://github.com/braghettos/krateo-keycloak-operator-kog) | **Configuration** — Keycloak Admin API resources as CRs | KOG (`oasgen-provider` + `rest-dynamic-controller`) over Keycloak's official OAS 3.0.3 |
+| [`krateo-keycloak-blueprint/`](https://github.com/krateo-blueprints/krateo-keycloak-blueprint) | **Lifecycle** — deploy/manage the Keycloak server | Krateo `CompositionDefinition` → chart → official Keycloak Operator (`Keycloak` CR) |
+| [`krateo-keycloak-operator-kog/`](https://github.com/krateo-blueprints/krateo-keycloak-operator-kog) | **Configuration** — Keycloak Admin API resources as CRs | KOG (`oasgen-provider` + `rest-dynamic-controller`) over Keycloak's official OAS 3.0.3 |
 
 They connect at exactly one point: the bearer **`keycloak-admin-token`** Secret
 (minted/rotated by External Secrets Operator) that the config KOG uses to call
