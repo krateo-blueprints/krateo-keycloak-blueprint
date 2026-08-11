@@ -4,7 +4,7 @@ description: >-
   Krateo blueprint that deploys and manages a Keycloak server via the
   official Keycloak Operator.
 type: application
-version: 0.1.0
+version: CHART_VERSION
 appVersion: "26.0"
 home: https://www.keycloak.org/operator/installation
 icon: https://raw.githubusercontent.com/cncf/artwork/master/projects/keycloak/icon/color/keycloak-icon-color.svg
