@@ -1,3 +1,12 @@
+---
+type: Architecture
+title: Architecture — krateo-keycloak-blueprint
+description: krateo-keycloak-blueprint — architecture reference.
+resource: https://github.com/krateo-blueprints/krateo-keycloak-blueprint
+tags: [architecture, krateo-blueprints]
+timestamp: 2026-08-11T00:00:00Z
+---
+
 # Keycloak for Krateo PlatformOps + OpenStack Horizon SSO
 
 Two complementary Krateo deliverables that bring Keycloak into the platform so
