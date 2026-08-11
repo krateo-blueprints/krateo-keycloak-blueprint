@@ -1,0 +1,25 @@
+# keycloak-blueprint — LLM doc index (pinned: 0.1.0)
+# One line per file; regenerate the pin on release. Read files at the tag that matches the
+# published chart: the chart version is CompositionDefinition.spec.chart.version and equals
+# Chart.yaml's version — one tag covers the chart and these docs.
+docs/index.md: the map — what the blueprint is + links to the whole bundle and the repo layout
+docs/overview.md: architecture — operator-for-lifecycle / KOG-for-config split, the two db providers, how the composition maps to operator CRs
+docs/usage.md: install the prerequisite operators, register the CompositionDefinition and apply the composition (or helm install), hand off to the config KOG
+docs/configuration.md: the whole values.yaml surface — the server, the cloudnativepg/external db modes, the bootstrap admin, invariants
+docs/api.md: the Keycloak composition CRD the chart generates and the downstream operator resources it renders
+docs/examples.md: index of the runnable examples
+docs/release.md: how a release ships — a plain-semver tag drives the chart to the GHCR OCI registry
+docs/log.md: curated history
+docs/ARCHITECTURE.md: the wider Keycloak↔Krateo↔OpenStack Horizon SSO design (lifecycle blueprint + config KOG)
+examples/minimal-server/README.md: the smallest complete deployment — one Keycloak instance on CloudNativePG
+# Source (read at the same tag; the docs above are derived from these):
+README.md: the standard component README (What is this / Install / Configure / Examples / Docs / Develop & release)
+QUICKSTART.md: the end-to-end walkthrough — server + config KOG + OpenStack Horizon SSO
+compositiondefinition.yaml: this component's registration (spec.chart.url + spec.chart.version)
+samples/keycloak.yaml: a sample composition CR (composition.krateo.io/v1alpha1, kind Keycloak)
+chart/Chart.yaml: the chart identity (name keycloak → Kind Keycloak; version → apiVersion group)
+chart/values.yaml: every value with its rationale in comments
+chart/values.schema.json: the typed schema core-provider derives the composition CRD from
+chart/templates/keycloak.yaml: the Keycloak operator CR (k8s.keycloak.org/v2alpha1)
+chart/templates/cluster-cnpg.yaml: the CloudNativePG Cluster (rendered in cloudnativepg mode)
+chart/templates/secrets.yaml: the external-mode DB Secret and the bootstrap-admin Secret
