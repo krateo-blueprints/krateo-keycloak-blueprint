@@ -1,0 +1,16 @@
+apiVersion: v2
+name: keycloak-operator
+description: >-
+  Thin wrapper packaging the upstream Keycloak Operator: its Deployment, RBAC and the two
+  official CRDs (Keycloak, KeycloakRealmImport). Ships no Krateo logic — it exists so the
+  keycloak blueprint's Keycloak CRs have a controller to reconcile them.
+type: application
+# The CHART's version, substituted from the git tag at release. NOT the operator version —
+# that is appVersion. Publishing the chart as "26.6.3" conflated the two and meant the
+# chart could not be revised without inventing an upstream version that does not exist.
+version: CHART_VERSION
+appVersion: "26.6.3"
+home: https://www.keycloak.org/
+sources:
+  - https://github.com/keycloak/keycloak-k8s-resources
+keywords: [krateo, keycloak, operator]

@@ -1,0 +1,27 @@
+# Namespace(s) the operator's controllers reconcile.
+#
+# Upstream ships the controllers with QUARKUS_OPERATOR_SDK_CONTROLLERS_*_NAMESPACES
+# set to the JOSDK sentinel "JOSDK_WATCH_CURRENT" (watch only the operator's own
+# namespace). This chart instead sets those env vars from .Values.watchNamespaces so
+# the watched namespace is explicit and does not depend on the release namespace.
+#
+# Comma-separate for multiple namespaces (e.g. "ns-a,ns-b"), or use the sentinel
+# "JOSDK_WATCH_ALL" to watch cluster-wide.
+watchNamespaces: krateo-system
+
+# Operator container image. Override to mirror into a private registry if needed.
+image:
+  repository: quay.io/keycloak/keycloak-operator
+  tag: "26.6.3"
+  pullPolicy: Always
+
+# Keycloak server image the operator deploys for Keycloak CRs
+# (upstream RELATED_IMAGE_KEYCLOAK).
+keycloakImage: quay.io/keycloak/keycloak:26.6.3
+
+# Operator container startup probe.
+# Relaxation for constrained nodes: bump failureThreshold (upstream ships 3).
+# Set to 30 to give the operator up to ~5 min to pass /q/health/started.
+# Default keeps the upstream value (relaxation OFF).
+startupProbe:
+  failureThreshold: 3
