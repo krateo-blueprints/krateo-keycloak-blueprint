@@ -1,10 +1,21 @@
-# Packages every chart in this repo and publishes each to the GitHub Container Registry as an OCI
-# Helm artifact on every semver tag. Shape-agnostic: it discovers charts by locating each Chart.yaml
-# (skipping vendored subcharts under charts/), so it works regardless of the repo's directory layout.
+# Canonical chart release workflow — krateo-platformops, krateo-agentiko, krateo-blueprints.
 #
-# Charts opt into versioning with the CHART_VERSION placeholder in Chart.yaml, which the git tag
-# replaces at publish time. Pushing tag "0.1.0" publishes each chart <name> as:
-#   oci://ghcr.io/<owner>/charts/<name>:0.1.0
+# Identical in every repository that ships a chart. Two invariants it enforces:
+#
+#   layout   every chart lives at helm/<chart-name>/
+#   tags     bare semver only: 0.3.39   (not v0.3.39, not name-0.1.0, not path/0.1.0)
+#
+# PUBLISHES ONLY WHAT CHANGED since the previous semver tag. A repo with 250 charts must
+# not republish 250 artifacts because one line moved: that is minutes of CI, 250 registry
+# writes, and 249 version bumps that contain no change. A chart's version is therefore the
+# tag at which that chart last actually changed, so charts within a repo legitimately sit
+# at different versions — which is how they are already consumed (the installer pins each
+# component independently).
+#
+# Conservative by design: when the diff cannot be attributed confidently — no previous tag,
+# or a change outside helm/ that any chart might depend on — it publishes EVERYTHING.
+# Over-publishing is noise; under-publishing silently ships a stale chart.
+
 name: release-tag
 
 on:
@@ -16,37 +27,110 @@ permissions:
   packages: write
 
 jobs:
-  package-and-push:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # need history to diff against the previous tag
 
-      - name: Install Helm
-        uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v4
 
       - name: Resolve version and registry
         run: |
           echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          # Owner-derived, so transferring a repo between orgs retargets automatically.
           echo "OCI_REPO=oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts" >> "$GITHUB_ENV"
+
+      - name: Enforce the layout invariant
+        run: |
+          set -euo pipefail
+          stray=$(find . -name Chart.yaml -not -path './.git/*' -not -path './helm/*' \
+                       -not -path '*/charts/*' | head -5)
+          if [ -n "$stray" ]; then
+            echo "::error::charts must live at helm/<chart-name>/ — found outside helm/:"
+            echo "$stray" | sed 's/^/  /'
+            exit 1
+          fi
+          [ -d helm ] || { echo "::error::no helm/ directory"; exit 1; }
+
+      - name: Select charts to publish
+        run: |
+          set -euo pipefail
+          prev=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname \
+                 | grep -v "^${VERSION}$" | head -1 || true)
+
+          publish_all() { find helm -mindepth 2 -maxdepth 2 -name Chart.yaml -exec dirname {} \; ; }
+
+          if [ -z "$prev" ]; then
+            echo "no previous semver tag — publishing every chart"
+            publish_all > /tmp/charts.txt
+          else
+            echo "diffing against ${prev}"
+            changed=$(git diff --name-only "${prev}..${VERSION}")
+            # A change anywhere outside helm/ (shared CI, toolkit, root values) may affect
+            # any chart. Cannot attribute it, so publish everything.
+            if echo "$changed" | grep -qv '^helm/'; then
+              echo "changes outside helm/ — publishing every chart (conservative)"
+              publish_all > /tmp/charts.txt
+            else
+              echo "$changed" | awk -F/ 'NF>=2 {print "helm/"$2}' | sort -u \
+                | while read -r d; do [ -f "$d/Chart.yaml" ] && echo "$d"; done > /tmp/charts.txt
+            fi
+          fi
+
+          n=$(wc -l < /tmp/charts.txt | tr -d ' ')
+          echo "selected ${n} chart(s):"
+          sed 's/^/  /' /tmp/charts.txt
+          # Publishing nothing on a release tag is almost always a mistake worth failing on.
+          [ "$n" -gt 0 ] || { echo "::error::tag ${VERSION} changes no chart"; exit 1; }
 
       - name: Log in to GHCR
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | \
-            helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
 
-      - name: Package and push every chart
+      - name: Package and push
         run: |
           set -euo pipefail
-          find . -type f -name Chart.yaml -not -path '*/charts/*' -print0 | while IFS= read -r -d '' cf; do
-            dir=$(dirname "$cf")
-            name=$(awk '/^name:/{print $2; exit}' "$cf")
-            echo "::group::${name} (${dir})"
-            # Stamp the CHART_VERSION placeholder, and pin the package version to the tag either way.
+          while read -r dir; do
+            [ -z "$dir" ] && continue
+            cf="$dir/Chart.yaml"
+            name=$(grep -E '^name:' "$cf" | head -1 | awk '{print $2}')
+            # The chart name is the public contract; the directory must match it so a
+            # reader can find the source of oci://.../charts/<name> without grepping.
+            [ "$name" = "$(basename "$dir")" ] || {
+              echo "::error::${cf}: name '${name}' != directory '$(basename "$dir")'"; exit 1; }
+
+            # CHART_VERSION placeholder is substituted from the tag; never hand-maintained.
             sed -i "s/CHART_VERSION/${VERSION}/g" "$cf"
-            helm dependency update "$dir" 2>/dev/null || true
-            helm package "$dir" --version "${VERSION}" --destination .
-            helm push "${name}-${VERSION}.tgz" "${OCI_REPO}"
-            echo "Published ${OCI_REPO}/${name}:${VERSION}"
-            echo "::endgroup::"
-          done
+            helm dependency build "$dir" 2>/dev/null || helm dependency update "$dir" 2>/dev/null || true
+            helm package "$dir" --version "${VERSION}" --destination /tmp/pkg
+            helm push "/tmp/pkg/${name}-${VERSION}.tgz" "${OCI_REPO}"
+            echo "pushed ${name}:${VERSION}"
+          done < /tmp/charts.txt
+
+      - name: Verify anonymous pullability
+        run: |
+          set -uo pipefail
+          # New GHCR packages default to PRIVATE and do not inherit visibility across orgs.
+          # core-provider pulls anonymously in-cluster, so a private package fails at
+          # provisioning with an opaque error. Fail loudly here instead.
+          fail=0
+          while read -r dir; do
+            [ -z "$dir" ] && continue
+            name=$(basename "$dir")
+            repo="${GITHUB_REPOSITORY_OWNER,,}/charts/${name}"
+            tok=$(curl -s "https://ghcr.io/token?scope=repository:${repo}:pull" \
+                  | python3 -c 'import sys,json;print(json.load(sys.stdin).get("token",""))')
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${tok}" \
+                   -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+                   "https://ghcr.io/v2/${repo}/manifests/${VERSION}")
+            if [ "$code" = "200" ]; then
+              echo "  ${name}: public"
+            else
+              echo "::warning::${name} is NOT anonymously pullable (HTTP ${code}) — set the package public"
+              fail=1
+            fi
+          done < /tmp/charts.txt
+          exit 0   # warn, don't block: visibility is a one-time manual step per package
