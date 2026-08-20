@@ -23,7 +23,10 @@ on:
     tags: ["[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
-  contents: read
+  # contents: write — the stamped CompositionDefinition is attached to the release.
+  # It is applied by hand and is not inside the packaged chart, so it must ship as a
+  # release asset, not just live in the runner.
+  contents: write
   packages: write
 
 jobs:
@@ -85,6 +88,32 @@ jobs:
           # Publishing nothing on a release tag is almost always a mistake worth failing on.
           [ "$n" -gt 0 ] || { echo "::error::tag ${VERSION} changes no chart"; exit 1; }
 
+      - name: Stamp every CompositionDefinition (guarded against an unpublished pin)
+        run: |
+          set -euo pipefail
+          # The CD pins the version of the chart it installs but lives at repo root, outside
+          # helm/, so the per-chart stamp below never touches it. Stamp it to the tag here —
+          # but only after proving the chart it names is actually being published at this tag.
+          # This repo publishes ONLY changed charts, so blindly stamping the CD to the tag could
+          # point it at a version of its chart that was skipped and never pushed. Fail loudly in
+          # that case rather than ship a CD naming a version that does not exist.
+          found=0
+          while IFS= read -r -d '' cd; do
+            # chart name = last path segment of the CD's OCI url (oci://.../charts/<name>)
+            target=$(awk '/^[[:space:]]*url:/{n=$2; sub(/.*\//,"",n); print n; exit}' "$cd")
+            if ! grep -qx "helm/${target}" /tmp/charts.txt; then
+              echo "::error::${cd} pins chart '${target}', which is NOT being published at ${VERSION}."
+              echo "  selected charts: $(tr '\n' ' ' < /tmp/charts.txt)"
+              echo "  Stamping the CD to ${VERSION} would name a version of '${target}' that was never pushed."
+              echo "  Change '${target}' in this release, or cut the CD change on a tag that also publishes it."
+              exit 1
+            fi
+            sed -i "s/CHART_VERSION/${VERSION}/g" "$cd"
+            echo "stamped $cd -> ${VERSION} (chart '${target}' is in the publish set)"
+            found=$((found+1))
+          done < <(find . -type f -name compositiondefinition.yaml -not -path '*/charts/*' -print0)
+          echo "CompositionDefinitions stamped: $found"
+
       - name: Log in to GHCR
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" \
@@ -134,3 +163,23 @@ jobs:
             fi
           done < /tmp/charts.txt
           exit 0   # warn, don't block: visibility is a one-time manual step per package
+
+      - name: Publish the stamped CompositionDefinitions on the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Runs after the charts are pushed: the chart is the primary artifact and an asset
+          # problem must never block it. Stage into a fresh dir so a root-level CD is never
+          # cp'd onto itself (an error, not a no-op — a lesson from selfservice 0.2.26).
+          stage="$(mktemp -d)"; assets=()
+          while IFS= read -r -d '' cd; do
+            d="$(dirname "$cd")"
+            if [ "$d" = "." ]; then out="compositiondefinition.yaml"; else out="compositiondefinition-$(basename "$d").yaml"; fi
+            cp "$cd" "$stage/$out"; assets+=("$stage/$out")
+          done < <(find . -type f -name compositiondefinition.yaml -not -path '*/charts/*' -print0)
+          [ ${#assets[@]} -eq 0 ] && { echo "no CompositionDefinition to publish"; exit 0; }
+          gh release view "${VERSION}" >/dev/null 2>&1 \
+            || gh release create "${VERSION}" --title "${VERSION}" --notes "Apply the attached CompositionDefinition to register this version."
+          gh release upload "${VERSION}" "${assets[@]}" --clobber
+          echo "attached: ${assets[*]}"
