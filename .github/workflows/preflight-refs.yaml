@@ -1,0 +1,39 @@
+# Resolve every chart and image reference in this repository against its registry.
+#
+# WHY THIS EXISTS. Four separate outages in this platform were the same defect: a pinned
+# chart or image that resolved to nothing. Each surfaced 30-45 minutes into a live cluster
+# rebuild — as an opaque ImagePullBackOff, or worse, as a Composition reporting Ready=True
+# while deploying nothing at all. Each would have taken seconds to catch here.
+#
+# It is deliberately a LIVE check against the registry, not a lint. The failure mode being
+# guarded is "this version was never published", which no amount of local validation sees.
+#
+# Anonymous by design: the child's kubelet and core-provider pull WITHOUT credentials, so
+# resolving anonymously tests what they will actually experience. A chart that resolves for
+# a logged-in maintainer but 404s anonymously is still broken in production.
+
+name: preflight-refs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Registries change under us — a package can be deleted or made private long after the
+  # last commit. A weekly run catches that without anyone touching the repo.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Resolve every chart and image reference
+        run: python3 hack/preflight-refs.py .
