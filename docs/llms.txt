@@ -17,9 +17,9 @@ README.md: the standard component README (What is this / Install / Configure / E
 QUICKSTART.md: the end-to-end walkthrough — server + config KOG + OpenStack Horizon SSO
 compositiondefinition.yaml: this component's registration (spec.chart.url + spec.chart.version)
 samples/keycloak.yaml: a sample composition CR (composition.krateo.io/v1alpha1, kind Keycloak)
-chart/Chart.yaml: the chart identity (name keycloak → Kind Keycloak; version → apiVersion group)
-chart/values.yaml: every value with its rationale in comments
-chart/values.schema.json: the typed schema core-provider derives the composition CRD from
-chart/templates/keycloak.yaml: the Keycloak operator CR (k8s.keycloak.org/v2alpha1)
-chart/templates/cluster-cnpg.yaml: the CloudNativePG Cluster (rendered in cloudnativepg mode)
-chart/templates/secrets.yaml: the external-mode DB Secret and the bootstrap-admin Secret
+helm/keycloak/Chart.yaml: the chart identity (name keycloak → Kind Keycloak; version → apiVersion group)
+helm/keycloak/values.yaml: every value with its rationale in comments
+helm/keycloak/values.schema.json: the typed schema core-provider derives the composition CRD from
+helm/keycloak/templates/keycloak.yaml: the Keycloak operator CR (k8s.keycloak.org/v2alpha1)
+helm/keycloak/templates/cluster-cnpg.yaml: the CloudNativePG Cluster (rendered in cloudnativepg mode)
+helm/keycloak/templates/secrets.yaml: the external-mode DB Secret and the bootstrap-admin Secret
