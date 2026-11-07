@@ -93,6 +93,15 @@ jobs:
             echo "::error::Marketplace index. Refusing to push to GHCR alone (krateo-blueprints/charts PUBLISHING.md rule 7)."
             exit 1
           fi
+          # The publisher refuses a token carrying whitespace or a control character (typically a
+          # trailing newline from piping into `gh secret set`), but only after this job has pushed to
+          # GHCR. Refuse it here, by name, before anything is pushed. The token is never printed.
+          case "${CHARTS_PUBLISH_TOKEN}" in
+            *[[:space:]]*|*[[:cntrl:]]*)
+              echo "::error::secret CHARTS_PUBLISH_TOKEN contains whitespace or a control character, usually a trailing newline."
+              echo "::error::Re-save it by pasting the token at the prompt of 'gh secret set CHARTS_PUBLISH_TOKEN --org krateo-blueprints --visibility all' (not piped from echo)."
+              exit 1 ;;
+          esac
 
       - uses: azure/setup-helm@v4
 
@@ -382,7 +391,7 @@ jobs:
     needs: release
     if: needs.release.outputs.blueprints != '0'
     # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@a2d63ba50e138b17f678528d6d6be3afef48715a # 1.0.0
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@36ea357cb0fe4b49628cc984d9939babf0049d03 # 1.0.1
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -395,7 +404,7 @@ jobs:
     needs: release
     if: needs.release.outputs.operators != '0'
     # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@a2d63ba50e138b17f678528d6d6be3afef48715a # 1.0.0
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@36ea357cb0fe4b49628cc984d9939babf0049d03 # 1.0.1
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
