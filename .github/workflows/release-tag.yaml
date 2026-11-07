@@ -381,9 +381,8 @@ jobs:
   publish-blueprints:
     needs: release
     if: needs.release.outputs.blueprints != '0'
-    # PUBLISHING.md rule 9: to be replaced by the 1.0.0 commit SHA (with a `# 1.0.0` comment) once
-    # tagged; .github/dependabot.yml then keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.0.0
+    # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@a2d63ba50e138b17f678528d6d6be3afef48715a # 1.0.0
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -395,9 +394,8 @@ jobs:
   publish-operators:
     needs: release
     if: needs.release.outputs.operators != '0'
-    # PUBLISHING.md rule 9: to be replaced by the 1.0.0 commit SHA (with a `# 1.0.0` comment) once
-    # tagged; .github/dependabot.yml then keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.0.0
+    # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@a2d63ba50e138b17f678528d6d6be3afef48715a # 1.0.0
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
