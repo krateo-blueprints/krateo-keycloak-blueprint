@@ -1,6 +1,7 @@
-# Canonical chart release workflow — krateo-platformops, krateo-agentiko, krateo-blueprints.
-#
-# Identical in every repository that ships a chart. Two invariants it enforces:
+# Chart release workflow, derived from the canonical one shared by krateo-platformops,
+# krateo-agentiko and krateo-blueprints. It differs from the canonical copy by the
+# Marketplace-index publication the organisation's publishing standard requires (below).
+# Two invariants it enforces:
 #
 #   layout   every chart lives at helm/<chart-name>/
 #   tags     bare semver only: 0.3.39   (not v0.3.39, not name-0.1.0, not path/0.1.0)
@@ -15,12 +16,21 @@
 # Conservative by design: when the diff cannot be attributed confidently — no previous tag,
 # or a change outside helm/ that any chart might depend on — it publishes EVERYTHING.
 # Over-publishing is noise; under-publishing silently ships a stale chart.
+#
+# Every chart it publishes is published twice, with the same bytes (krateo-blueprints/charts
+# PUBLISHING.md): to GHCR by the release job, and to the helm index the portal Marketplace
+# installs from (https://krateo-blueprints.github.io/charts/<channel>/index.yaml) by the
+# organisation's publisher, krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.
+# The channel follows from the content: keycloak (values.schema.json and a CompositionDefinition)
+# is a blueprint, keycloak-operator an operator. Because only changed charts are published, a tag
+# may carry one channel and not the other; each publish job runs when its channel has a chart.
 
 name: release-tag
 
 on:
   push:
-    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   # contents: write — the stamped CompositionDefinition is attached to the release.
@@ -29,13 +39,59 @@ permissions:
   contents: write
   packages: write
 
+env:
+  # The Marketplace channels this repository publishes to (PUBLISHING.md rule 2: the channel
+  # follows from the content). A chart whose content puts it in another channel fails the release
+  # before anything is pushed, instead of reaching GHCR and never reaching the index.
+  CHANNELS: blueprints operators
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      blueprints: ${{ steps.package.outputs.blueprints }}
+      operators: ${{ steps.package.outputs.operators }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # need history to diff against the previous tag
+
+      # Refuse to release a commit no lint run ever passed on (PUBLISHING.md rule 10). A quiet check
+      # list reads as success, so the never-triggered case is the one this makes loud.
+      - name: The commit being released must have passed lint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="${{ github.sha }}"
+          runs="$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/lint.yaml/runs?head_sha=${sha}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.status == "completed")] | length')"
+          ok="$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/lint.yaml/runs?head_sha=${sha}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length')"
+          echo "lint runs on ${sha}: ${runs} completed, ${ok} successful"
+          if [ "${runs}" -eq 0 ]; then
+            echo "::error::No lint run exists for ${sha}. Dispatch lint.yaml on this commit, confirm it passes, then re-tag."
+            exit 1
+          fi
+          if [ "${ok}" -eq 0 ]; then
+            echo "::error::lint ran on ${sha} but never succeeded. Refusing to publish."
+            exit 1
+          fi
+
+      # The publish-index job below needs this secret, and it has no fallback (PUBLISHING.md rule 7).
+      # Refuse here, before anything is pushed, so a missing token fails the release instead of
+      # leaving GHCR holding a version the Marketplace index never receives.
+      - name: The Marketplace index token must be present
+        env:
+          CHARTS_PUBLISH_TOKEN: ${{ secrets.CHARTS_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "${CHARTS_PUBLISH_TOKEN}" ]; then
+            echo "::error::secret CHARTS_PUBLISH_TOKEN is not set, so this release could not reach the"
+            echo "::error::Marketplace index. Refusing to push to GHCR alone (krateo-blueprints/charts PUBLISHING.md rule 7)."
+            exit 1
+          fi
 
       - uses: azure/setup-helm@v4
 
@@ -119,25 +175,144 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
 
-      - name: Package and push
+      # Every chart is packaged and checked first, and only then is anything pushed, so a chart the
+      # Marketplace index would refuse never reaches GHCR either (PUBLISHING.md rules 1 to 3).
+      - name: Package and check every selected chart
+        id: package
         run: |
           set -euo pipefail
+          want_base="oci://ghcr.io/krateo-blueprints/charts"
+          mkdir -p pkg dist/blueprints dist/operators
+
+          # The CompositionDefinition of each chart, keyed by the chart it installs: the last
+          # segment of its spec.chart.url.
+          declare -A cd_for=()
+          while IFS= read -r -d '' cd; do
+            url="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.url' "$cd")"
+            url="${url%%$'\n'*}"
+            if [ -z "$url" ] || [ "$url" = null ]; then
+              echo "::error::${cd} has no CompositionDefinition spec.chart.url"; exit 1
+            fi
+            target="${url##*/}"
+            if [ -n "${cd_for[$target]:-}" ]; then
+              echo "::error::${cd_for[$target]} and ${cd} both install ${target}"; exit 1
+            fi
+            cd_for[$target]="$cd"
+          done < <(find . -type f -name compositiondefinition.yaml -not -path '*/charts/*' -not -path './.git/*' -print0)
+
           while read -r dir; do
             [ -z "$dir" ] && continue
             cf="$dir/Chart.yaml"
-            name=$(grep -E '^name:' "$cf" | head -1 | awk '{print $2}')
+            name="$(yq -r '.name' "$cf")"
+            echo "::group::${name} (${dir})"
             # The chart name is the public contract; the directory must match it so a
             # reader can find the source of oci://.../charts/<name> without grepping.
             [ "$name" = "$(basename "$dir")" ] || {
               echo "::error::${cf}: name '${name}' != directory '$(basename "$dir")'"; exit 1; }
-
             # CHART_VERSION placeholder is substituted from the tag; never hand-maintained.
             sed -i "s/CHART_VERSION/${VERSION}/g" "$cf"
-            helm dependency build "$dir" 2>/dev/null || helm dependency update "$dir" 2>/dev/null || true
-            helm package "$dir" --version "${VERSION}" --destination /tmp/pkg
-            helm push "/tmp/pkg/${name}-${VERSION}.tgz" "${OCI_REPO}"
-            echo "pushed ${name}:${VERSION}"
+            if grep -q '^dependencies:' "$cf"; then
+              helm dependency update "$dir"
+            fi
+
+            # The channel follows from the content (PUBLISHING.md rule 2).
+            cd="${cd_for[$name]:-}"
+            if [ -n "$cd" ] && [ ! -f "$dir/values.schema.json" ]; then
+              echo "::error::${cd} installs ${name}, which has no values.schema.json, so core-provider cannot generate its CRD"
+              exit 1
+            fi
+            if [ -n "$cd" ]; then channel=blueprints; else channel=operators; fi
+            case " ${CHANNELS} " in
+              *" ${channel} "*)
+                : ;;
+              *)
+                echo "::error::${name} is ${channel} content, but this workflow publishes only to: ${CHANNELS}"
+                exit 1 ;;
+            esac
+
+            if [ "$channel" = blueprints ]; then
+              cd_url="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.url' "$cd")"
+              cd_url="${cd_url%%$'\n'*}"
+              cd_ver="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.version' "$cd")"
+              cd_ver="${cd_ver%%$'\n'*}"
+              [ "$cd_url" = "${want_base}/${name}" ] || {
+                echo "::error::${cd} installs ${cd_url}, not ${want_base}/${name}"; exit 1; }
+              [ "$cd_ver" = "$VERSION" ] || {
+                echo "::error::${cd} installs ${name} version '${cd_ver}', not ${VERSION}"; exit 1; }
+              # Ship the stamped CompositionDefinition inside the chart, at the root, where helm
+              # packages it but never renders it (rule 3). Removed again after packaging, so any
+              # later step that looks for CompositionDefinitions finds only the repository's own.
+              cp "$cd" "$dir/compositiondefinition.yaml"
+            fi
+
+            helm package "$dir" --version "${VERSION}" --destination pkg
+            tgz="pkg/${name}-${VERSION}.tgz"
+
+            if [ "$channel" = blueprints ]; then
+              rm "$dir/compositiondefinition.yaml"
+              # Check the archive, not the copy: helm package exits 0 whether or not the file made
+              # it in. These are the checks the Marketplace publisher makes; failing them here
+              # keeps a refused chart out of GHCR too.
+              members="$(tar tzf "$tgz")"
+              for want in "${name}/compositiondefinition.yaml" "${name}/values.schema.json"; do
+                grep -qxF "$want" <<< "$members" || {
+                  echo "::error::${tgz} lacks ${want}; refusing to push"; exit 1; }
+              done
+              packed_cd="$(tar -xzO -f "$tgz" "${name}/compositiondefinition.yaml")"
+              packed_url="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.url' <<< "$packed_cd")"
+              packed_ver="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.version' <<< "$packed_cd")"
+              [ "${packed_url%%$'\n'*}" = "${want_base}/${name}" ] && [ "${packed_ver%%$'\n'*}" = "$VERSION" ] || {
+                echo "::error::${tgz}: its CompositionDefinition installs ${packed_url} ${packed_ver}"; exit 1; }
+              chart_yaml="$(tar -xzO -f "$tgz" "${name}/Chart.yaml")"
+              icon="$(yq -r '.icon // ""' <<< "$chart_yaml")"
+              case "$icon" in
+                https://*)
+                  : ;;
+                *)
+                  echo "::error::${name}: Chart.yaml icon must be an absolute https URL, got '${icon}'"; exit 1 ;;
+              esac
+              [ "$(yq -r '(.keywords // []) | length' <<< "$chart_yaml")" -gt 0 ] || {
+                echo "::error::${name}: Chart.yaml needs keywords, the Marketplace's tags"; exit 1; }
+            fi
+
+            mv "$tgz" "dist/${channel}/"
+            echo "${name} ${VERSION} -> ${channel}"
+            unset "cd_for[$name]"
+            echo "::endgroup::"
           done < /tmp/charts.txt
+
+          if [ "${#cd_for[@]}" -gt 0 ]; then
+            echo "::error::CompositionDefinitions install charts this release does not publish: ${!cd_for[*]}"
+            exit 1
+          fi
+          for channel in blueprints operators; do
+            echo "${channel}=$(find "dist/${channel}" -name '*.tgz' | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Push every chart to GHCR
+        run: |
+          set -euo pipefail
+          for tgz in dist/*/*.tgz; do
+            helm push "$tgz" "${OCI_REPO}"
+            echo "pushed $(basename "$tgz" .tgz)"
+          done
+
+      # The same bytes that went to GHCR, for the Marketplace index, one artifact per channel.
+      - name: Hand the blueprint tarballs to the index job
+        if: steps.package.outputs.blueprints != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: charts-blueprints
+          path: dist/blueprints/*.tgz
+          if-no-files-found: error
+
+      - name: Hand the operator tarballs to the index job
+        if: steps.package.outputs.operators != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: charts-operators
+          path: dist/operators/*.tgz
+          if-no-files-found: error
 
       - name: Verify anonymous pullability
         run: |
@@ -183,3 +358,32 @@ jobs:
             || gh release create "${VERSION}" --title "${VERSION}" --notes "Apply the attached CompositionDefinition to register this version."
           gh release upload "${VERSION}" "${assets[@]}" --clobber
           echo "attached: ${assets[*]}"
+
+  # The Marketplace installs what https://krateo-blueprints.github.io/charts/<channel>/index.yaml
+  # lists, not what GHCR holds. The organisation's one publisher, at its major tag
+  # (krateo-blueprints/charts PUBLISHING.md), once per channel; it also reads the served index and
+  # installs every chart anonymously before it succeeds. A channel with no chart in this release
+  # pushed nothing to GHCR either, so its job is skipped.
+  publish-blueprints:
+    needs: release
+    if: needs.release.outputs.blueprints != '0'
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1
+    with:
+      source_repo: ${{ github.repository }}
+      git_tag: ${{ github.ref_name }}
+      channel: blueprints
+      artifact: charts-blueprints
+    secrets:
+      PUBLISH_TOKEN: ${{ secrets.CHARTS_PUBLISH_TOKEN }}
+
+  publish-operators:
+    needs: release
+    if: needs.release.outputs.operators != '0'
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1
+    with:
+      source_repo: ${{ github.repository }}
+      git_tag: ${{ github.ref_name }}
+      channel: operators
+      artifact: charts-operators
+    secrets:
+      PUBLISH_TOKEN: ${{ secrets.CHARTS_PUBLISH_TOKEN }}

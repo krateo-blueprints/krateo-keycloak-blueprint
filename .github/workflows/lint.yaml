@@ -7,6 +7,12 @@ on:
   pull_request:
     paths:
       - "**"
+  # The release refuses a commit with no successful lint run (krateo-blueprints/charts
+  # PUBLISHING.md rule 10), and a release tags a commit on main, which a pull_request run
+  # never covers.
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:

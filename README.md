@@ -102,17 +102,20 @@ session) is walked in [QUICKSTART.md](QUICKSTART.md).
 
 ## Develop & release
 
-The chart lives in `chart/`; register it with `compositiondefinition.yaml`. A release is a
-single plain-semver tag (`X.Y.Z`, **no** `v` prefix) matching `chart/Chart.yaml`'s
-`version`:
+The charts live in `helm/keycloak/` (the blueprint) and `helm/keycloak-operator/`; register
+the blueprint with `compositiondefinition.yaml`. A release is a single plain-semver tag
+(`X.Y.Z`, **no** `v` prefix); the committed versions are the `CHART_VERSION` placeholder,
+stamped from the tag:
 
 ```bash
 git tag X.Y.Z && git push origin X.Y.Z
 ```
 
-`.github/workflows/release-tag.yaml` lints, verifies the tag matches `Chart.yaml`,
-packages, and pushes to `oci://ghcr.io/krateo-blueprints/charts/keycloak` — exactly what
-`compositiondefinition.yaml`'s `spec.chart.url` points at. After publishing, bump the
-`CompositionDefinition`'s `spec.chart.version`. `.github/workflows/lint.yaml` runs the
-shared `lint-docs` (Krateo Documentation Standard) check on every PR. Full runbook in
+`.github/workflows/release-tag.yaml` packages each changed chart, pushes it to
+`oci://ghcr.io/krateo-blueprints/charts/<chart>` (for `keycloak`, exactly what
+`compositiondefinition.yaml`'s `spec.chart.url` points at), and publishes the same archives to
+the Marketplace index — `keycloak` to the `blueprints` channel, `keycloak-operator` to
+`operators` — per the organisation's publishing standard (krateo-blueprints/charts
+`PUBLISHING.md`). Nothing is bumped by hand. `.github/workflows/lint.yaml` runs the
+shared `lint-docs` (Krateo Documentation Standard) check on every PR and push to `main`. Full runbook in
 [docs/release.md](docs/release.md).
