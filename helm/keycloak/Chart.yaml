@@ -14,6 +14,7 @@ keywords:
   - sso
   - security
   - authentication
+  - blueprint
 sources:
   - https://github.com/krateo-blueprints/krateo-keycloak-blueprint
   - https://github.com/keycloak/keycloak/tree/main/operator
