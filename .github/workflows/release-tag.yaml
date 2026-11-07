@@ -391,7 +391,7 @@ jobs:
     needs: release
     if: needs.release.outputs.blueprints != '0'
     # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@36ea357cb0fe4b49628cc984d9939babf0049d03 # 1.0.1
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@f0138e816ce827279ad087202889c009899741f7 # 1.0.2
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -404,7 +404,7 @@ jobs:
     needs: release
     if: needs.release.outputs.operators != '0'
     # PUBLISHING.md rule 9: pinned by full commit SHA; .github/dependabot.yml keeps it current.
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@36ea357cb0fe4b49628cc984d9939babf0049d03 # 1.0.1
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@f0138e816ce827279ad087202889c009899741f7 # 1.0.2
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
