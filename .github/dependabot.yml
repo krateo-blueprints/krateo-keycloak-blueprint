@@ -1,0 +1,15 @@
+# krateo-blueprints/charts PUBLISHING.md rule 9: the index publisher is pinned to an exact release (it
+# receives CHARTS_PUBLISH_TOKEN, an org-wide write token, so a movable ref would let whoever moves it run
+# code with that token here). Dependabot is what keeps that pin current: a new publisher release arrives
+# as a reviewed pull request instead of silently.
+#
+# The github-actions ecosystem also covers the actions/* refs in every workflow. Branch refs such as the
+# shared krateo-platformops reusables at @main are not version refs, so Dependabot leaves them alone.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

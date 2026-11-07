@@ -34,7 +34,7 @@ same bytes, as the organisation's publishing standard requires
 5. **Pushes** each to `oci://ghcr.io/krateo-blueprints/charts/<chart>:X.Y.Z`, which for `keycloak` is
    exactly what `compositiondefinition.yaml`'s `spec.chart.url` points at.
 6. **Publishes** the same archives to the Marketplace index through the organisation's publisher
-   (`krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1`): `keycloak` to
+   (`krateo-blueprints/charts/.github/workflows/publish-chart.yaml`, pinned per its rule 9): `keycloak` to
    `https://krateo-blueprints.github.io/charts/blueprints`, `keycloak-operator` to
    `https://krateo-blueprints.github.io/charts/operators`. A channel with no chart in this release is
    skipped. The portal Marketplace installs from these indexes, not from GHCR; the publisher succeeds

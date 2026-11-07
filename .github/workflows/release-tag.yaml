@@ -20,7 +20,7 @@
 # Every chart it publishes is published twice, with the same bytes (krateo-blueprints/charts
 # PUBLISHING.md): to GHCR by the release job, and to the helm index the portal Marketplace
 # installs from (https://krateo-blueprints.github.io/charts/<channel>/index.yaml) by the
-# organisation's publisher, krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.
+# organisation's publisher, krateo-blueprints/charts/.github/workflows/publish-chart.yaml (pinned below).
 # The channel follows from the content: keycloak (values.schema.json and a CompositionDefinition)
 # is a blueprint, keycloak-operator an operator. Because only changed charts are published, a tag
 # may carry one channel and not the other; each publish job runs when its channel has a chart.
@@ -41,8 +41,9 @@ permissions:
 
 env:
   # The Marketplace channels this repository publishes to (PUBLISHING.md rule 2: the channel
-  # follows from the content). A chart whose content puts it in another channel fails the release
-  # before anything is pushed, instead of reaching GHCR and never reaching the index.
+  # follows from the content: blueprints, pages or operators). A chart whose content puts it in
+  # another channel fails the release before anything is pushed, instead of reaching GHCR and
+  # never reaching the index.
   CHANNELS: blueprints operators
 
 jobs:
@@ -182,7 +183,7 @@ jobs:
         run: |
           set -euo pipefail
           want_base="oci://ghcr.io/krateo-blueprints/charts"
-          mkdir -p pkg dist/blueprints dist/operators
+          mkdir -p pkg dist/blueprints dist/pages dist/operators
 
           # The CompositionDefinition of each chart, keyed by the chart it installs: the last
           # segment of its spec.chart.url.
@@ -221,7 +222,13 @@ jobs:
               echo "::error::${cd} installs ${name}, which has no values.schema.json, so core-provider cannot generate its CRD"
               exit 1
             fi
-            if [ -n "$cd" ]; then channel=blueprints; else channel=operators; fi
+            if [ -z "$cd" ]; then
+              channel=operators
+            elif [ "$(yq -r '.annotations."krateo.io/kind" // ""' "$cf")" = page-set ]; then
+              channel=pages
+            else
+              channel=blueprints
+            fi
             case " ${CHANNELS} " in
               *" ${channel} "*)
                 : ;;
@@ -230,7 +237,7 @@ jobs:
                 exit 1 ;;
             esac
 
-            if [ "$channel" = blueprints ]; then
+            if [ "$channel" != operators ]; then
               cd_url="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.url' "$cd")"
               cd_url="${cd_url%%$'\n'*}"
               cd_ver="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.version' "$cd")"
@@ -247,8 +254,16 @@ jobs:
 
             helm package "$dir" --version "${VERSION}" --destination pkg
             tgz="pkg/${name}-${VERSION}.tgz"
+            packed_chart="$(tar -xzO -f "$tgz" "${name}/Chart.yaml")"
 
-            if [ "$channel" = blueprints ]; then
+            # Every chart, in every channel, names the repository that builds it (rule 3), so a
+            # pinned chart can be traced to the commit and CI run that built it.
+            src_url="https://github.com/${GITHUB_REPOSITORY}"
+            srcs="$(yq -r '.sources // [] | .[]' <<< "$packed_chart")"
+            grep -qxF "$src_url" <<< "$srcs" || {
+              echo "::error::${name}: Chart.yaml sources: must list ${src_url}, the repository that builds it"; exit 1; }
+
+            if [ "$channel" != operators ]; then
               rm "$dir/compositiondefinition.yaml"
               # Check the archive, not the copy: helm package exits 0 whether or not the file made
               # it in. These are the checks the Marketplace publisher makes; failing them here
@@ -263,15 +278,14 @@ jobs:
               packed_ver="$(yq -r 'select(.kind == "CompositionDefinition") | .spec.chart.version' <<< "$packed_cd")"
               [ "${packed_url%%$'\n'*}" = "${want_base}/${name}" ] && [ "${packed_ver%%$'\n'*}" = "$VERSION" ] || {
                 echo "::error::${tgz}: its CompositionDefinition installs ${packed_url} ${packed_ver}"; exit 1; }
-              chart_yaml="$(tar -xzO -f "$tgz" "${name}/Chart.yaml")"
-              icon="$(yq -r '.icon // ""' <<< "$chart_yaml")"
+              icon="$(yq -r '.icon // ""' <<< "$packed_chart")"
               case "$icon" in
                 https://*)
                   : ;;
                 *)
                   echo "::error::${name}: Chart.yaml icon must be an absolute https URL, got '${icon}'"; exit 1 ;;
               esac
-              [ "$(yq -r '(.keywords // []) | length' <<< "$chart_yaml")" -gt 0 ] || {
+              [ "$(yq -r '(.keywords // []) | length' <<< "$packed_chart")" -gt 0 ] || {
                 echo "::error::${name}: Chart.yaml needs keywords, the Marketplace's tags"; exit 1; }
             fi
 
@@ -360,14 +374,16 @@ jobs:
           echo "attached: ${assets[*]}"
 
   # The Marketplace installs what https://krateo-blueprints.github.io/charts/<channel>/index.yaml
-  # lists, not what GHCR holds. The organisation's one publisher, at its major tag
+  # lists, not what GHCR holds. The organisation's one publisher
   # (krateo-blueprints/charts PUBLISHING.md), once per channel; it also reads the served index and
   # installs every chart anonymously before it succeeds. A channel with no chart in this release
   # pushed nothing to GHCR either, so its job is skipped.
   publish-blueprints:
     needs: release
     if: needs.release.outputs.blueprints != '0'
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1
+    # PUBLISHING.md rule 9: to be replaced by the 1.0.0 commit SHA (with a `# 1.0.0` comment) once
+    # tagged; .github/dependabot.yml then keeps it current.
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.0.0
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -379,7 +395,9 @@ jobs:
   publish-operators:
     needs: release
     if: needs.release.outputs.operators != '0'
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1
+    # PUBLISHING.md rule 9: to be replaced by the 1.0.0 commit SHA (with a `# 1.0.0` comment) once
+    # tagged; .github/dependabot.yml then keeps it current.
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1.0.0
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
