@@ -65,7 +65,7 @@ headline knobs:
 
 | key | default | effect |
 |---|---|---|
-| `keycloak.hostname` | `keycloak.example.com` | the stable external HTTPS host the OIDC clients reach (federation is hostname-sensitive) |
+| `keycloak.hostname` | `https://keycloak.example.com` | the stable external base URL the OIDC clients reach, **including `https://`** — Keycloak builds the issuer from it (federation is hostname-sensitive) |
 | `keycloak.instances` | `1` | server replicas |
 | `keycloak.http.httpEnabled` / `.tlsSecretName` | `true` / `""` | plain HTTP vs terminate TLS at Keycloak |
 | `keycloak.ingress.enabled` / `.className` | `true` / `""` | operator-managed ingress |

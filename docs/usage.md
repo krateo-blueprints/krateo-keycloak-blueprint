@@ -67,8 +67,8 @@ $ kubectl -n keycloak-system wait --for=condition=Ready keycloak/keycloak --time
 For a throwaway or CI run you can `helm install` the chart without Krateo:
 
 ```console
-$ helm install keycloak ./chart -n keycloak-system \
-    --set keycloak.hostname=keycloak.demo.local \
+$ helm install keycloak ./helm/keycloak -n keycloak-system \
+    --set keycloak.hostname=https://keycloak.demo.local \
     --set keycloak.http.httpEnabled=true \
     --set keycloak.ingress.enabled=false \
     --set-json 'keycloak.additionalOptions=[{"name":"hostname-strict","value":"false"}]'

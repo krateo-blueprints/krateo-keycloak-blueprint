@@ -9,7 +9,7 @@ spec:
   keycloak:
     name: keycloak
     instances: 1
-    hostname: "keycloak.example.com"
+    hostname: "https://keycloak.example.com"
     http:
       httpEnabled: true
     ingress:

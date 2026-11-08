@@ -4,9 +4,13 @@
 keycloak:
   name: keycloak
   instances: 1
-  # External hostname users (and the Keystone/Krateo OIDC clients) reach.
-  # MUST be a stable HTTPS hostname — federation is very hostname-sensitive.
-  hostname: "keycloak.example.com"
+  # External base URL users (and the Keystone/Krateo OIDC clients) reach: a full
+  # https:// URL, not a bare host. Keycloak builds the token issuer (`iss`) from it, so
+  # the scheme is fixed here rather than guessed from proxy headers — a bare host behind
+  # a TLS-terminating proxy that omits X-Forwarded-Proto advertises an http:// issuer,
+  # which OIDC clients reject. Federation is hostname-sensitive: keep it stable.
+  # The operator derives the Ingress host from this URL.
+  hostname: "https://keycloak.example.com"
   # Image override (defaults to the operator's pinned Keycloak image when empty).
   image: ""
 
