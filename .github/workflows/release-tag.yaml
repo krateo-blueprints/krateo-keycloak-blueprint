@@ -266,11 +266,16 @@ jobs:
             packed_chart="$(tar -xzO -f "$tgz" "${name}/Chart.yaml")"
 
             # Every chart, in every channel, names the repository that builds it (rule 3), so a
-            # pinned chart can be traced to the commit and CI run that built it.
+            # pinned chart can be traced to the commit and CI run that built it. Matched as the
+            # publisher (1.0.3) matches it, never stricter: case-insensitive, trailing slashes
+            # ignored, otherwise the whole URL (a /tree/main suffix or a longer name is not it).
+            # BEGIN sources-check
             src_url="https://github.com/${GITHUB_REPOSITORY}"
-            srcs="$(yq -r '.sources // [] | .[]' <<< "$packed_chart")"
-            grep -qxF "$src_url" <<< "$srcs" || {
+            src_lc="$(tr '[:upper:]' '[:lower:]' <<< "$src_url")"
+            srcs="$(yq -r '.sources // [] | .[]' <<< "$packed_chart" | tr '[:upper:]' '[:lower:]' | sed 's#/*$##')"
+            grep -qxF "$src_lc" <<< "$srcs" || {
               echo "::error::${name}: Chart.yaml sources: must list ${src_url}, the repository that builds it"; exit 1; }
+            # END sources-check
 
             if [ "$channel" != operators ]; then
               rm "$dir/compositiondefinition.yaml"
