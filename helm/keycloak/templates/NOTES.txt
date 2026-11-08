@@ -12,7 +12,7 @@ Install it once (per release version) with:
 
 Next:
   1. Wait for the server:  kubectl get keycloak {{ .Values.keycloak.name }} -o jsonpath='{.status.conditions}'
-  2. Reach it at:          https://{{ .Values.keycloak.hostname }}
+  2. Reach it at:          {{ .Values.keycloak.hostname }}
   3. Create the KOG service-account client (krateo-kog) and hand its secret to
      keycloak-config-kog (the configuration KOG), then apply the realm CRs.
 
