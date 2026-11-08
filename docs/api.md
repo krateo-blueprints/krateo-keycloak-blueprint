@@ -47,7 +47,7 @@ spec:
   keycloak:
     name: keycloak
     instances: 1
-    hostname: "keycloak.example.com"
+    hostname: "https://keycloak.example.com"
     http:
       httpEnabled: true
     ingress:
@@ -93,7 +93,7 @@ fields the chart sets:
 | `spec.db.host` / `.port` | `<cluster>-rw` : 5432 (cloudnativepg) or `db.host`/`db.port` (external) | wired by provider mode |
 | `spec.db.usernameSecret` / `.passwordSecret` | `<cluster>-app` (cloudnativepg) or `db.secret` (external) | credentials reference |
 | `spec.http.httpEnabled` / `.tlsSecret` | `keycloak.http.*` | `tlsSecret` omitted when empty |
-| `spec.hostname.hostname` | `keycloak.hostname` | |
+| `spec.hostname.hostname` | `keycloak.hostname` | full `https://` URL, passed through unchanged; the operator derives the Ingress host from it |
 | `spec.ingress.enabled` / `.className` | `keycloak.ingress.*` | `className` omitted when empty |
 | `spec.proxy.headers` | `keycloak.proxyHeaders` | proxy block omitted when empty |
 | `spec.bootstrapAdmin.user.secret` | `bootstrapAdmin.secret.name` | rendered only when `bootstrapAdmin.enabled` |

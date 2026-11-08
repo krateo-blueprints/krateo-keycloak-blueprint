@@ -20,7 +20,7 @@ double as the CR field reference.
 |---|---|---|
 | `keycloak.name` | `keycloak` | name of the rendered `Keycloak` operator CR. |
 | `keycloak.instances` | `1` | server replicas (`spec.instances`). Schema-required, `minimum: 1`. |
-| `keycloak.hostname` | `keycloak.example.com` | the external hostname users and the OIDC clients reach (`spec.hostname.hostname`). **Must be a stable HTTPS host** — federation is very hostname-sensitive. Schema-required. |
+| `keycloak.hostname` | `https://keycloak.example.com` | the external base URL users and the OIDC clients reach (`spec.hostname.hostname`). **A full `https://` URL** — Keycloak builds the token issuer from it, so the scheme never depends on proxy headers. Schema-required and schema-checked (`^https://`). |
 | `keycloak.image` | `""` | pin a specific Keycloak image; empty uses the operator's pinned default. |
 | `keycloak.http.httpEnabled` | `true` | allow plain HTTP (`spec.http.httpEnabled`). Set `true` when an ingress/Gateway terminates TLS upstream. |
 | `keycloak.http.tlsSecretName` | `""` | a cert Secret to terminate TLS **at** Keycloak (`spec.http.tlsSecret`). Leave empty when TLS is terminated in front. |
@@ -86,9 +86,10 @@ A temporary admin for first login and creating the KOG service-account client.
 
 ## Invariants
 
-- **`keycloak.hostname` must be stable and HTTPS in any federated deployment.** OIDC
-  federation (Krateo `authn`, Keystone/Horizon) is hostname-sensitive; a token minted
-  against one host fails elsewhere.
+- **`keycloak.hostname` is a stable `https://` URL.** OIDC federation (Krateo `authn`,
+  Keystone/Horizon) is hostname-sensitive; a token minted against one issuer fails
+  elsewhere. A bare host is refused by the schema: behind a TLS-terminating proxy that
+  does not send `X-Forwarded-Proto`, it made Keycloak advertise an `http://` issuer.
 - **Set `hostname-strict=false` when in-cluster callers use the Service name.** Add it
   via `keycloak.additionalOptions` so the config KOG can reach the server by its
   in-cluster Service rather than the public hostname.

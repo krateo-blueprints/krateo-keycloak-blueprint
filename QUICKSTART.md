@@ -77,8 +77,8 @@ kubectl -n krateo-system   rollout status deploy/oasgen-provider
 
 ```bash
 git clone https://github.com/krateo-blueprints/krateo-keycloak-blueprint
-helm install keycloak ./krateo-keycloak-blueprint/chart -n keycloak-system \
-  --set keycloak.hostname=keycloak.demo.local \
+helm install keycloak ./krateo-keycloak-blueprint/helm/keycloak -n keycloak-system \
+  --set keycloak.hostname=https://keycloak.demo.local \
   --set keycloak.http.httpEnabled=true \
   --set keycloak.ingress.enabled=false \
   --set-json 'keycloak.additionalOptions=[{"name":"hostname-strict","value":"false"}]'
@@ -94,7 +94,7 @@ kubectl -n keycloak-system wait --for=condition=Ready keycloak/keycloak --timeou
 ```
 
 > Production: deploy via the Krateo `CompositionDefinition` instead of raw helm,
-> set `keycloak.ingress.enabled=true` + a real TLS `hostname`, and
+> set `keycloak.ingress.enabled=true` + a real `https://` `hostname` URL, and
 > `db.cloudnativepg.instances: 3` for an HA database.
 
 ---

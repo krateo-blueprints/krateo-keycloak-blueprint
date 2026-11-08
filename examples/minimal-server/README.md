@@ -42,8 +42,8 @@ installs the chart, which renders the `Keycloak` operator CR, the `keycloak-db` 
 ## Or install the chart directly
 
 ```console
-$ helm install keycloak ../../chart -n keycloak-system \
-    --set keycloak.hostname=keycloak.demo.local \
+$ helm install keycloak ../../helm/keycloak -n keycloak-system \
+    --set keycloak.hostname=https://keycloak.demo.local \
     --set keycloak.http.httpEnabled=true \
     --set keycloak.ingress.enabled=false \
     --set-json 'keycloak.additionalOptions=[{"name":"hostname-strict","value":"false"}]'
