@@ -14,13 +14,21 @@ Curated history; release notes live in GitHub Releases.
 ## 2026-11-08 — `keycloak.hostname` is a full https URL (breaking)
 
 `keycloak.hostname` now takes a full base URL (`https://keycloak.example.com`) and the
-schema refuses a bare host. Found on the gate 1 cluster: with a bare host behind a
-TLS-terminating Gateway that sends no `X-Forwarded-Proto`, Keycloak 26.6.3 advertised an
-`http://` issuer even with `proxyHeaders: xforwarded`, and selfservice's parent-SSO
-helper (correctly) refused it. A URL fixes the scheme in the value itself, so the issuer
-no longer depends on what the proxy sends. The operator already accepts a URL here and
-derives the Ingress host from it (`KeycloakIngressDependentResource`,
-`new URL(hostname).getHost()`, Keycloak 26.6.3).
+schema refuses a bare host. The reason is that **the default must not depend on a proxy
+header the chart does not control**; it is not that a bare host always fails. With a bare
+host the scheme comes from `X-Forwarded-Proto`, so it is right only where the proxy sends
+that header. Found on the gate 1 cluster: behind a TLS-terminating Gateway that sends no
+`X-Forwarded-Proto`, Keycloak 26.6.3 advertised `http://keycloak.gate1.cmp.krateo.dev/realms/krateo`
+even with `proxyHeaders: xforwarded`. The failure was **silent**: 200s, a valid
+certificate, a working console. Only a consumer that validates the scheme
+(selfservice's parent-SSO helper) noticed, so a deployment without one would carry an
+http issuer indefinitely. That is why the schema enforces it rather than a docs note.
+
+Verified on the same cluster with the URL form: all 13 URL-valued fields of
+`/realms/krateo/.well-known/openid-configuration` are `https://keycloak.gate1.cmp.krateo.dev/…`,
+with no other host and no port. The operator already accepts a URL here and derives the
+Ingress host from it (`KeycloakIngressDependentResource`, `new URL(hostname).getHost()`,
+Keycloak 26.6.3).
 
 **Migration:** prefix the existing value with `https://`, e.g.
 `keycloak.example.com` → `https://keycloak.example.com`. Nothing else changes.
