@@ -64,7 +64,8 @@ from `db.secret`.
 | `db.secret.create` | `true` | render a credentials Secret from the literals below. **Dev only** — set `false` in production and reference an existing/ESO-synced Secret. |
 | `db.secret.name` | `keycloak-db` | the credentials Secret name. Schema-required. |
 | `db.secret.usernameKey` / `.passwordKey` | `username` / `password` | keys within the Secret the `Keycloak` CR reads. Schema-required. |
-| `db.secret.username` / `.password` | `keycloak` / `change-me` | literals written when `create: true`. **Override `password`** — the chart NOTES warn on the `change-me` default. |
+| `db.secret.username` | `keycloak` | the username written when `create: true`. |
+| `db.secret.password` | `""` | the external database's password, written when `create: true`. **Required** in that case: an empty value or `change-me` makes the render fail, because the password must match your database and cannot be generated. Use `create: false` with your own Secret to keep it out of values entirely. |
 
 ## Bootstrap admin (`bootstrapAdmin.*`)
 
@@ -110,10 +111,11 @@ warning when the Secret still holds it. Change the admin password in the console
 - **In `cloudnativepg` mode the CNPG operator must be installed.** The chart renders the
   `Cluster` CR but not the operator that reconciles it; without CNPG the credentials
   Secret and `-rw` Service the `Keycloak` CR references are never created.
-- **Never ship the `change-me` DB password default.** `db.secret.password` (external mode
-  only) defaults to `change-me`, because it must match your external database and cannot be
-  generated. The chart's `NOTES.txt` warns: override it, or reference an existing Secret with
-  `create: false`. The bootstrap admin password is generated (above).
+- **The external DB password is never defaulted.** With `db.provider: external` and
+  `db.secret.create: true`, the render fails unless `db.secret.password` is set (and is not
+  `change-me`). It must match your database, so the chart cannot generate it. Prefer
+  `create: false` with an existing or ESO-synced Secret. The bootstrap admin password, by
+  contrast, is generated (above).
 - **`db.provider` picks exactly one backing store.** `cloudnativepg` renders the
   `Cluster` and ignores `db.host`/`db.secret`; `external` uses `db.host`/`db.secret` and
   renders no `Cluster`.
