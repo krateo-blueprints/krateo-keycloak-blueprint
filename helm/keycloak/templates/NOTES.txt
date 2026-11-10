@@ -15,6 +15,11 @@ Next:
   2. Reach it at:          {{ .Values.keycloak.hostname }}
   3. Create the KOG service-account client (krateo-kog) and hand its secret to
      keycloak-config-kog (the configuration KOG), then apply the realm CRs.
+{{- if and .Values.bootstrapAdmin.service.enabled .Values.bootstrapAdmin.service.secret.create }}
+     A bootstrap admin SERVICE ACCOUNT is ready for that ("{{ .Values.bootstrapAdmin.service.secret.clientId }}",
+     client_credentials, secret in Secret {{ .Values.bootstrapAdmin.service.secret.name }}), so no
+     human password is needed for it.
+{{- end }}
 
 {{- if and .Values.bootstrapAdmin.enabled .Values.bootstrapAdmin.secret.create }}
 {{- $bootstrapName := .Values.bootstrapAdmin.secret.name }}

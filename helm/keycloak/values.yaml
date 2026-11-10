@@ -89,6 +89,18 @@ bootstrapAdmin:
     #   kubectl get secret keycloak-bootstrap-admin -o jsonpath='{.data.password}' | base64 -d
     # Set it only if you must choose it yourself.
     password: ""
+  # The bootstrap admin SERVICE ACCOUNT: a confidential client (client_credentials) that the config
+  # KOG authenticates as, so nobody creates the KOG's credential by hand. Like the user above it is
+  # TEMPORARY: the config KOG creates its permanent `krateo-kog` client from it, switches to that,
+  # and deletes this one. The secret is generated on first install and reused on upgrade.
+  service:
+    enabled: true
+    secret:
+      create: true
+      name: keycloak-bootstrap-service
+      clientId: krateo-bootstrap
+      # Leave empty: generated (32 characters) on first install, reused on every upgrade.
+      clientSecret: ""
 
 # Install the Keycloak Operator + CRDs as part of this release. Default false:
 # the operator is normally a cluster-wide prerequisite applied once (see README).

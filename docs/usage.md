@@ -82,13 +82,16 @@ for the full value surface.
 
 ## Operator startup probe on constrained nodes
 
-If `keycloak-operator` CrashLoopBackOffs on a memory-constrained node (its Quarkus pod
-fails the default `startupProbe` before the JVM boots), relax the probe:
+If `keycloak-operator` CrashLoopBackOffs on a memory- or CPU-constrained node (its Quarkus pod
+fails the default `startupProbe` before the JVM boots), relax the probe through the chart's
+own value, so the setting survives every upgrade:
 
 ```console
-$ kubectl -n keycloak-system patch deploy keycloak-operator --type=json \
-    -p='[{"op":"replace","path":"/spec/template/spec/containers/0/startupProbe/failureThreshold","value":30}]'
+$ helm upgrade keycloak-operator oci://ghcr.io/krateo-blueprints/charts/keycloak-operator \
+    -n keycloak-system --reuse-values --set startupProbe.failureThreshold=30
 ```
+
+Do not `kubectl patch` the Deployment: the next upgrade reverts it.
 
 ## Hand off to the config KOG
 
