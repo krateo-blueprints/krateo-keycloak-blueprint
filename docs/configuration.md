@@ -75,7 +75,21 @@ A temporary admin for first login and creating the KOG service-account client.
 | `bootstrapAdmin.enabled` | `true` | wire `spec.bootstrapAdmin.user.secret` into the `Keycloak` CR. |
 | `bootstrapAdmin.secret.create` | `true` | render the admin Secret from the literals below. Set `false` to reference an existing one. |
 | `bootstrapAdmin.secret.name` | `keycloak-bootstrap-admin` | the admin Secret name. Schema-required. |
-| `bootstrapAdmin.secret.username` / `.password` | `admin` / `change-me` | literals written when `create: true`. **Override `password`** — the chart NOTES warn on `change-me`. |
+| `bootstrapAdmin.secret.username` | `admin` | the bootstrap user's name, written when `create: true`. This chart names the user, so it is never the operator's `temp-admin`. |
+| `bootstrapAdmin.secret.password` | `""` (generated) | empty: the chart **generates** a 32-character password on first install and **reuses** the one already in the Secret on every upgrade. Set it only to choose one yourself. |
+
+Read the password with
+`kubectl get secret keycloak-bootstrap-admin -o jsonpath='{.data.password}' | base64 -d`.
+
+**The operator applies the bootstrap admin only on the server's first start.** After that
+the password lives in Keycloak's database, and changing the Secret changes nothing. That is
+why the chart reuses the existing value instead of regenerating it (a regenerated Secret
+would stop matching the live admin), and it is gated in CI by
+`hack/check-bootstrap-password.py`.
+
+**Installs first created with chart <= 0.2.0** that never set this value got the public
+default `change-me`, and upgrading does not change a live password. The chart's NOTES print a
+warning when the Secret still holds it. Change the admin password in the console.
 
 ## Operator (`operator.*`)
 
@@ -96,9 +110,10 @@ A temporary admin for first login and creating the KOG service-account client.
 - **In `cloudnativepg` mode the CNPG operator must be installed.** The chart renders the
   `Cluster` CR but not the operator that reconciles it; without CNPG the credentials
   Secret and `-rw` Service the `Keycloak` CR references are never created.
-- **Never ship the `change-me` password defaults.** `db.secret.password` (external mode)
-  and `bootstrapAdmin.secret.password` default to `change-me`; the chart's `NOTES.txt`
-  warns, but override them (or reference an existing Secret with `create: false`).
+- **Never ship the `change-me` DB password default.** `db.secret.password` (external mode
+  only) defaults to `change-me`, because it must match your external database and cannot be
+  generated. The chart's `NOTES.txt` warns: override it, or reference an existing Secret with
+  `create: false`. The bootstrap admin password is generated (above).
 - **`db.provider` picks exactly one backing store.** `cloudnativepg` renders the
   `Cluster` and ignores `db.host`/`db.secret`; `external` uses `db.host`/`db.secret` and
   renders no `Cluster`.

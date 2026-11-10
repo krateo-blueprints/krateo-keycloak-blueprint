@@ -74,13 +74,19 @@ db:
 # ---------------------------------------------------------------------------
 # Bootstrap admin (temporary, for first login + creating the KOG service account)
 # ---------------------------------------------------------------------------
+# The operator applies this only on the server's FIRST start; after that the password lives in
+# Keycloak's database, and changing the Secret changes nothing.
 bootstrapAdmin:
   enabled: true
   secret:
     create: true
     name: keycloak-bootstrap-admin
     username: admin
-    password: "change-me"
+    # Leave empty (the default) and the chart GENERATES a 32-character password on first install,
+    # then REUSES the one already in the Secret on every upgrade. Read it with:
+    #   kubectl get secret keycloak-bootstrap-admin -o jsonpath='{.data.password}' | base64 -d
+    # Set it only if you must choose it yourself.
+    password: ""
 
 # Install the Keycloak Operator + CRDs as part of this release. Default false:
 # the operator is normally a cluster-wide prerequisite applied once (see README).

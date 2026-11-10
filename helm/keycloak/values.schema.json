@@ -85,8 +85,8 @@
           "properties": {
             "create": { "type": "boolean" },
             "name": { "type": "string" },
-            "username": { "type": "string" },
-            "password": { "type": "string" }
+            "username": { "type": "string", "description": "Bootstrap admin username in the master realm. This chart names it, so it is never the operator's temp-admin." },
+            "password": { "type": "string", "default": "", "description": "Leave empty: the chart generates a 32-character password on first install and reuses the Secret's value on every upgrade (the operator applies it only at the server's first start). Set it only to choose one yourself." }
           },
           "required": ["name"]
         }
