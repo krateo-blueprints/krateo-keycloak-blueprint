@@ -89,6 +89,23 @@
             "password": { "type": "string", "default": "", "description": "Leave empty: the chart generates a 32-character password on first install and reuses the Secret's value on every upgrade (the operator applies it only at the server's first start). Set it only to choose one yourself." }
           },
           "required": ["name"]
+        },
+        "service": {
+          "type": "object",
+          "description": "The bootstrap admin SERVICE ACCOUNT (a confidential client) the config KOG authenticates as. Temporary: the KOG replaces it with its own permanent client.",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secret": {
+              "type": "object",
+              "properties": {
+                "create": { "type": "boolean" },
+                "name": { "type": "string" },
+                "clientId": { "type": "string", "description": "Client id of the bootstrap service account in the master realm." },
+                "clientSecret": { "type": "string", "default": "", "description": "Leave empty: generated (32 characters) on first install and reused from the Secret on every upgrade." }
+              },
+              "required": ["name"]
+            }
+          }
         }
       }
     },

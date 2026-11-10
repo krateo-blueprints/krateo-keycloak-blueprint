@@ -94,5 +94,5 @@ Keycloak session) is laid out in `docs/ARCHITECTURE.md` and walked end-to-end in
 On memory-constrained nodes the operator's Quarkus pod can fail its default
 `startupProbe` (`/q/health/started`) before the JVM finishes booting, and
 CrashLoopBackOff. If `keycloak-operator` won't reach Ready, relax the probe's
-`failureThreshold` — the exact patch is in [usage](./usage.md) and the README. This is an
+`failureThreshold` through the operator chart's `startupProbe.failureThreshold` value ([usage](./usage.md)). This is an
 operator-install concern, not a chart-rendered resource.

@@ -47,10 +47,16 @@ spec:
   proxy:
     headers: {{ . | quote }}
   {{- end }}
-  {{- if .Values.bootstrapAdmin.enabled }}
+  {{- if or .Values.bootstrapAdmin.enabled .Values.bootstrapAdmin.service.enabled }}
   bootstrapAdmin:
+    {{- if .Values.bootstrapAdmin.enabled }}
     user:
       secret: {{ .Values.bootstrapAdmin.secret.name }}
+    {{- end }}
+    {{- if .Values.bootstrapAdmin.service.enabled }}
+    service:
+      secret: {{ .Values.bootstrapAdmin.service.secret.name }}
+    {{- end }}
   {{- end }}
   {{- with .Values.keycloak.additionalOptions }}
   additionalOptions:

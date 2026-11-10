@@ -78,6 +78,17 @@ A temporary admin for first login and creating the KOG service-account client.
 | `bootstrapAdmin.secret.name` | `keycloak-bootstrap-admin` | the admin Secret name. Schema-required. |
 | `bootstrapAdmin.secret.username` | `admin` | the bootstrap user's name, written when `create: true`. This chart names the user, so it is never the operator's `temp-admin`. |
 | `bootstrapAdmin.secret.password` | `""` (generated) | empty: the chart **generates** a 32-character password on first install and **reuses** the one already in the Secret on every upgrade. Set it only to choose one yourself. |
+| `bootstrapAdmin.service.enabled` | `true` | also bootstrap an admin **service account** (a confidential client, `client_credentials`) via `spec.bootstrapAdmin.service.secret`. It is what keycloak-config-kog authenticates as, so the KOG's credential is never created by hand. |
+| `bootstrapAdmin.service.secret.create` | `true` | render the service-account Secret (keys `client-id`, `client-secret`, the operator's names). Set `false` to reference an existing one. |
+| `bootstrapAdmin.service.secret.name` | `keycloak-bootstrap-service` | the service-account Secret name. |
+| `bootstrapAdmin.service.secret.clientId` | `krateo-bootstrap` | the client id in the master realm. |
+| `bootstrapAdmin.service.secret.clientSecret` | `""` (generated) | empty: generated on first install and **reused** on every upgrade, by the same gated helper as the password. |
+
+Both bootstrap accounts are **temporary** by Keycloak's own definition. The planned end state:
+keycloak-config-kog uses the service account to create its permanent `krateo-kog` client and a
+permanent human admin, switches to them, and deletes both bootstrap accounts. Until
+keycloak-config-kog can authenticate with the service account directly, use it (or the user) to
+create `krateo-kog` as described in [usage](./usage.md).
 
 Read the password with
 `kubectl get secret keycloak-bootstrap-admin -o jsonpath='{.data.password}' | base64 -d`.

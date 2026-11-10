@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""CI gate for keycloak.bootstrapAdminPassword: the decision that REUSES the bootstrap admin password
-already in the cluster, takes an explicit one, or generates a new one.
+"""CI gate for keycloak.reuseOrGenerate: the decision that REUSES a bootstrap credential already in the
+cluster (the admin user's password, the admin service account's client secret), takes an explicit one,
+or generates a new one.
 
 Pattern and reasoning from krateo-platformops/installer#782 (check-signing-key.py).
 
@@ -42,26 +43,30 @@ import yaml
 
 HELPERS = Path("helm/keycloak/templates/_helpers.tpl")
 SECRETS = Path("helm/keycloak/templates/secrets.yaml")
-HELPER = "keycloak.bootstrapAdminPassword"
+HELPER = "keycloak.reuseOrGenerate"
+# Every data key the chart passes to the helper; each is exercised.
+KEYS = ["password", "client-secret"]
 
 SENTINEL = "SENTINEL-EXISTING-PASSWORD-MUST-NOT-CHANGE"
 SENTINEL_B64 = base64.b64encode(SENTINEL.encode()).decode()
 
-# (label, looked-up Secret, explicit value, expectation)
-CASES = [
-    ("explicit password wins over an existing Secret", {"data": {"password": SENTINEL_B64}}, "chosen", "explicit"),
-    ("Secret present with password -> REUSE IT", {"data": {"password": SENTINEL_B64}}, "", "reuse"),
-    ("no Secret at all -> generate", None, "", "generate"),
-    ("Secret present, data empty -> generate", {"data": {}}, "", "generate"),
-    ("Secret present, no data field -> generate", {"metadata": {"name": "x"}}, "", "generate"),
-    ("Secret present, different key -> generate", {"data": {"other": SENTINEL_B64}}, "", "generate"),
-    ("no Secret, second call -> generate (must differ from the first)", None, "", "generate"),
-]
+# (label, looked-up Secret, data key, explicit value, expectation), for every key the chart uses
+CASES = []
+for _k in KEYS:
+    CASES += [
+        (f"[{_k}] explicit value wins over an existing Secret", {"data": {_k: SENTINEL_B64}}, _k, "chosen", "explicit"),
+        (f"[{_k}] Secret present with the key -> REUSE IT", {"data": {_k: SENTINEL_B64}}, _k, "", "reuse"),
+        (f"[{_k}] no Secret at all -> generate", None, _k, "", "generate"),
+        (f"[{_k}] Secret present, data empty -> generate", {"data": {}}, _k, "", "generate"),
+        (f"[{_k}] Secret present, no data field -> generate", {"metadata": {"name": "x"}}, _k, "", "generate"),
+        (f"[{_k}] Secret present, only another key -> generate", {"data": {"other": SENTINEL_B64}}, _k, "", "generate"),
+        (f"[{_k}] no Secret, second call -> generate (must differ)", None, _k, "", "generate"),
+    ]
 
 PROBE = (
     "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\ndata:\n"
     "{{- range $i, $c := .Values.cases }}\n"
-    '  case{{ $i }}: {{ (include "' + HELPER + '" (list $c.found $c.explicit)) | b64enc | quote }}\n'
+    '  case{{ $i }}: {{ (include "' + HELPER + '" (list $c.found $c.key $c.explicit)) | b64enc | quote }}\n'
     "{{- end }}\n"
 )
 
@@ -76,7 +81,7 @@ def render(helpers_text):
         (chart / "templates" / "probe.yaml").write_text(PROBE)
         (chart / "values.yaml").write_text("cases: []\n")
         vals = work / "cases.yaml"
-        vals.write_text(yaml.safe_dump({"cases": [{"found": f, "explicit": e} for _, f, e, _ in CASES]}))
+        vals.write_text(yaml.safe_dump({"cases": [{"found": f, "key": k, "explicit": e} for _, f, k, e, _ in CASES]}))
         p = subprocess.run(["helm", "template", "probe", str(chart), "-f", str(vals)], capture_output=True, text=True)
         if p.returncode != 0:
             return {"__error__": p.stderr.strip()[:1200]}
@@ -90,38 +95,46 @@ def judge(out):
     """Return the list of failed assertions for one render."""
     if "__error__" in out:
         return [f"render failed: {out['__error__']}"]
-    errors, generated = [], []
-    for i, (label, _found, explicit, want) in enumerate(CASES):
+    errors, generated, reused = [], [], []
+    for i, (label, _found, _key, explicit, want) in enumerate(CASES):
         got = out.get(f"case{i}")
         if want == "explicit" and got != explicit:
             errors.append(f"{label}: expected the explicit value, got {got!r}")
-        elif want == "reuse" and got != SENTINEL:
-            errors.append(f"{label}: expected the EXISTING password, got a different value (it would rotate)")
+        elif want == "reuse":
+            reused.append(got)
+            if got != SENTINEL:
+                errors.append(f"{label}: expected the EXISTING value, got a different one (it would rotate)")
         elif want == "generate":
             if not (got and len(got) == 32 and got.isalnum()) or got == SENTINEL:
                 errors.append(f"{label}: expected 32 generated alphanumerics, got {got!r}")
             generated.append(got)
     if len(set(generated)) != len(generated):
         errors.append("two generate calls returned the same value: generation is not live")
-    if out.get("case1") in generated:
+    if any(r in generated for r in reused):
         errors.append("the reuse arm returned a generated value")
     return errors
 
 
 def wiring():
+    """Every `lookup` in secrets.yaml: its name variable is metadata.name, its result is what reaches the
+    helper, and the helper's result is what the Secret emits."""
     s = SECRETS.read_text()
     errors = []
-    m = re.search(r'\$(\w+)\s*:=\s*lookup\s+"v1"\s+"Secret"\s+\.Release\.Namespace\s+\$(\w+)', s)
-    if not m:
-        return ['secrets.yaml no longer performs `lookup "v1" "Secret" .Release.Namespace $<name>`']
-    found_var, name_var = m.group(1), m.group(2)
-    if not re.search(r"name:\s*\{\{\s*\$" + name_var + r"\s*\}\}", s):
-        errors.append(f"metadata.name is not the same variable ${name_var} the lookup uses")
-    if not re.search(r'include\s+"' + re.escape(HELPER) + r'"\s+\(list\s+\$' + found_var + r"\b", s):
-        errors.append(f"the looked-up ${found_var} is not what is passed to {HELPER}")
-    pw = re.search(r"\$(\w+)\s*:=\s*include\s+\"" + re.escape(HELPER) + '"', s)
-    if not pw or not re.search(r"password:\s*\{\{\s*\$" + pw.group(1) + r"\b", s):
-        errors.append("the emitted password is not the helper's result")
+    lookups = re.findall(r'\$(\w+)\s*:=\s*lookup\s+"v1"\s+"Secret"\s+\.Release\.Namespace\s+\$(\w+)', s)
+    if len(lookups) < len(KEYS):
+        return [f"secrets.yaml performs {len(lookups)} lookup(s); expected one per bootstrap credential ({len(KEYS)})"]
+    for found_var, name_var in lookups:
+        if not re.search(r"name:\s*\{\{\s*\$" + name_var + r"\s*\}\}", s):
+            errors.append(f"metadata.name is not the same variable ${name_var} its lookup uses")
+        call = re.search(r'\$(\w+)\s*:=\s*include\s+"' + re.escape(HELPER) + r'"\s+\(list\s+\$' + found_var + r'\s+"([^"]+)"', s)
+        if not call:
+            errors.append(f"the looked-up ${found_var} is not what is passed to {HELPER}")
+            continue
+        out_var, key = call.group(1), call.group(2)
+        if key not in KEYS:
+            errors.append(f"{HELPER} is called with key {key!r}, which this gate does not exercise; add it to KEYS")
+        if not re.search(r"\b" + re.escape(key) + r":\s*\{\{\s*\$" + out_var + r"\b", s):
+            errors.append(f"the emitted {key} is not the helper's result ${out_var}")
     return errors
 
 
@@ -129,8 +142,8 @@ def main():
     helpers = HELPERS.read_text()
     errors = judge(render(helpers))
     # Mutant: delete the reuse branch. The gate must catch it, or its silence means nothing.
-    mutant = re.sub(r'\{\{- else if and \$found \$found\.data \(hasKey \$found\.data "password"\) -\}\}\n'
-                    r'\{\{- index \$found\.data "password" \| b64dec -\}\}\n', "", helpers)
+    mutant = re.sub(r'\{\{- else if and \$found \$found\.data \(hasKey \$found\.data \$key\) -\}\}\n'
+                    r'\{\{- index \$found\.data \$key \| b64dec -\}\}\n', "", helpers)
     if mutant == helpers:
         errors.append("could not build the mutant: the reuse branch changed shape, update this gate")
     elif not judge(render(mutant)):
