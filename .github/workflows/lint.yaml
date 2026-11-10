@@ -7,6 +7,12 @@ on:
   pull_request:
     paths:
       - "**"
+  # Every commit that reaches main gets a lint run, so release-tag can refuse a tag on a commit
+  # that never passed lint (krateo-blueprints/charts PUBLISHING.md rule 10). A squash merge creates
+  # a commit no pull-request run ever saw.
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:

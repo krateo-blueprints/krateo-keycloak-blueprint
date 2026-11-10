@@ -69,7 +69,9 @@ db:
     usernameKey: username
     passwordKey: password
     username: keycloak
-    password: "change-me"
+    # REQUIRED in external mode with create=true: your external database's password. It cannot be
+    # generated (it must match the database), so an empty value or "change-me" refuses to render.
+    password: ""
 
 # ---------------------------------------------------------------------------
 # Bootstrap admin (temporary, for first login + creating the KOG service account)

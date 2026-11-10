@@ -12,5 +12,9 @@ version: CHART_VERSION
 appVersion: "26.6.3"
 home: https://www.keycloak.org/
 sources:
+  - https://github.com/krateo-blueprints/krateo-keycloak-blueprint
   - https://github.com/keycloak/keycloak-k8s-resources
-keywords: [krateo, keycloak, operator]
+keywords:
+  - keycloak
+  - identity
+  - operator

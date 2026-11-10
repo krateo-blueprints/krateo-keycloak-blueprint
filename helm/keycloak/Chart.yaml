@@ -15,6 +15,7 @@ keywords:
   - security
   - authentication
 sources:
+  - https://github.com/krateo-blueprints/krateo-keycloak-blueprint
   - https://github.com/keycloak/keycloak/tree/main/operator
 maintainers:
   - name: krateo

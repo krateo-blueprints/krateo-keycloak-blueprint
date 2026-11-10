@@ -16,10 +16,6 @@ Next:
   3. Create the KOG service-account client (krateo-kog) and hand its secret to
      keycloak-config-kog (the configuration KOG), then apply the realm CRs.
 
-{{- if eq .Values.db.secret.password "change-me" }}
-
-WARNING: db.secret.password is still the default "change-me" — override it.
-{{- end }}
 {{- if and .Values.bootstrapAdmin.enabled .Values.bootstrapAdmin.secret.create }}
 {{- $bootstrapName := .Values.bootstrapAdmin.secret.name }}
 
