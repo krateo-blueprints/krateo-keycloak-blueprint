@@ -20,6 +20,24 @@ Next:
 
 WARNING: db.secret.password is still the default "change-me" — override it.
 {{- end }}
-{{- if and .Values.bootstrapAdmin.enabled (eq .Values.bootstrapAdmin.secret.password "change-me") }}
-WARNING: bootstrapAdmin.secret.password is still the default "change-me" — override it.
+{{- if and .Values.bootstrapAdmin.enabled .Values.bootstrapAdmin.secret.create }}
+{{- $bootstrapName := .Values.bootstrapAdmin.secret.name }}
+
+Bootstrap admin (TEMPORARY): user "{{ .Values.bootstrapAdmin.secret.username }}" in the master realm.
+This chart names the user, so it is NOT the operator's "temp-admin". Read its password with:
+  kubectl -n {{ .Release.Namespace }} get secret {{ $bootstrapName }} -o jsonpath='{.data.password}' | base64 -d
+{{- $live := lookup "v1" "Secret" .Release.Namespace $bootstrapName }}
+{{- $liveDefault := and $live $live.data (hasKey $live.data "password") (eq (index $live.data "password" | b64dec) "change-me") }}
+{{- if $liveDefault }}
+
+WARNING: Secret {{ $bootstrapName }} holds the old chart default "change-me". This install was
+first created by chart <= 0.2.0 without overriding it, so the master admin's live password is
+very likely that public default. Upgrading the chart does NOT change it: the operator applied it
+once, at first start, and Keycloak keeps it in its database. Change it in the admin console now.
+{{- end }}
+{{- if and (not $liveDefault) (eq .Values.bootstrapAdmin.secret.password "change-me") }}
+
+WARNING: bootstrapAdmin.secret.password is set to "change-me", by your values or carried over by
+`helm upgrade --reuse-values` from chart <= 0.2.0. Leave it empty and the chart generates one.
+{{- end }}
 {{- end }}

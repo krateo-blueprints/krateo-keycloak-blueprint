@@ -27,6 +27,17 @@ jobs:
           find . -type f -name Chart.yaml -not -path '*/charts/*' -not -path './.git/*' \
             -exec sed -i "s/CHART_VERSION/0.0.0-ci/g" {} +
 
+      # Gating, unlike the informational step below. The bootstrap admin password is generated on
+      # first install and must be REUSED on every upgrade: a reuse arm that silently stops firing
+      # rotates the Secret away from the live admin with a clean render and a clean apply.
+      # `helm template` cannot execute `lookup`, so this exercises the decision helper directly,
+      # proves it catches a reuse-deleted mutant, and asserts the lookup/name wiring.
+      - name: Gate the bootstrap admin password (reuse / generate / explicit)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 hack/check-bootstrap-password.py
+
       - name: helm template + lint every chart (informational)
         run: |
           set -uo pipefail
