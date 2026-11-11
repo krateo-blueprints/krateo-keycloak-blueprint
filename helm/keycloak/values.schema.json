@@ -33,8 +33,7 @@
             "required": ["name", "value"]
           }
         }
-      },
-      "required": ["name", "instances", "hostname"]
+      }
     },
     "db": {
       "type": "object",
@@ -56,8 +55,7 @@
                 "storageClass": { "type": "string" }
               }
             }
-          },
-          "required": ["clusterName", "instances", "owner"]
+          }
         },
         "host": { "type": "string" },
         "port": { "type": "integer" },
@@ -70,11 +68,9 @@
             "passwordKey": { "type": "string" },
             "username": { "type": "string" },
             "password": { "type": "string", "default": "", "description": "External database password. Required when db.provider=external and db.secret.create=true (empty or change-me refuses to render); it must match your database and cannot be generated." }
-          },
-          "required": ["name", "usernameKey", "passwordKey"]
+          }
         }
-      },
-      "required": ["vendor", "database", "provider"]
+      }
     },
     "bootstrapAdmin": {
       "type": "object",
@@ -87,8 +83,7 @@
             "name": { "type": "string" },
             "username": { "type": "string", "description": "Bootstrap admin username in the master realm. This chart names it, so it is never the operator's temp-admin." },
             "password": { "type": "string", "default": "", "description": "Leave empty: the chart generates a 32-character password on first install and reuses the Secret's value on every upgrade (the operator applies it only at the server's first start). Set it only to choose one yourself." }
-          },
-          "required": ["name"]
+          }
         },
         "service": {
           "type": "object",
@@ -102,8 +97,7 @@
                 "name": { "type": "string" },
                 "clientId": { "type": "string", "description": "Client id of the bootstrap service account in the master realm." },
                 "clientSecret": { "type": "string", "default": "", "description": "Leave empty: generated (32 characters) on first install and reused from the Secret on every upgrade." }
-              },
-              "required": ["name"]
+              }
             }
           }
         }
@@ -116,6 +110,5 @@
         "version": { "type": "string" }
       }
     }
-  },
-  "required": ["keycloak", "db"]
+  }
 }
