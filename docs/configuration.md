@@ -19,11 +19,15 @@ double as the CR field reference.
 | key | default | effect |
 |---|---|---|
 | `keycloak.name` | `keycloak` | name of the rendered `Keycloak` operator CR. |
-| `keycloak.instances` | `1` | server replicas (`spec.instances`). Schema-required, `minimum: 1`. |
-| `keycloak.hostname` | `https://keycloak.example.com` | the external base URL users and the OIDC clients reach (`spec.hostname.hostname`). **A full `https://` URL** — Keycloak builds the token issuer from it, so the scheme never depends on proxy headers. Schema-required and schema-checked (`^https://`). |
+| `keycloak.instances` | `1` | server replicas (`spec.instances`). Schema-checked `minimum: 1`; optional (defaulted), so a Composition CR may omit it. |
+| `keycloak.hostname` | `https://keycloak.example.com` | the external base URL users and the OIDC clients reach (`spec.hostname.hostname`). **A full `https://` URL** — Keycloak builds the token issuer from it, so the scheme never depends on proxy headers. Schema-checked (`^https://`); optional (defaulted), so a Composition CR may omit it. |
 | `keycloak.image` | `""` | pin a specific Keycloak image; empty uses the operator's pinned default. |
 | `keycloak.http.httpEnabled` | `true` | allow plain HTTP (`spec.http.httpEnabled`). Set `true` when an ingress/Gateway terminates TLS upstream. |
 | `keycloak.http.tlsSecretName` | `""` | a cert Secret to terminate TLS **at** Keycloak (`spec.http.tlsSecret`). Leave empty when TLS is terminated in front. |
+| `keycloak.http.certificate.enabled` | `false` | have cert-manager issue Keycloak's serving certificate into `tlsSecretName` (which must then be set). DNS names: `<keycloak.name>-service.<namespace>.svc` and `.svc.cluster.local`, plus `extraDnsNames`; usages of a server leaf; ECDSA P-256, key rotated on renewal. |
+| `keycloak.http.certificate.issuerRef.{kind,name}` | `ClusterIssuer` / `krateo-private-ca` | the issuer, e.g. [krateo-private-ca](https://github.com/krateo-blueprints/krateo-private-ca), whose issuance policy must allow those names from this namespace. |
+| `keycloak.http.certificate.extraDnsNames` | `[]` | additional DNS names. |
+| `keycloak.http.certificate.duration` | `""` | certificate lifetime; set it when the issuer's policy bounds the duration. |
 | `keycloak.ingress.enabled` | `true` | render the operator-managed ingress (`spec.ingress.enabled`). |
 | `keycloak.ingress.className` | `""` | ingress class; empty uses the cluster default. |
 | `keycloak.proxyHeaders` | `xforwarded` | proxy header mode when TLS is terminated in front (`spec.proxy.headers`). Schema enum: `""`, `forwarded`, `xforwarded`. |

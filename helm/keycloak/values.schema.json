@@ -14,7 +14,22 @@
           "type": "object",
           "properties": {
             "httpEnabled": { "type": "boolean" },
-            "tlsSecretName": { "type": "string" }
+            "tlsSecretName": { "type": "string" },
+            "certificate": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "issuerRef": {
+                  "type": "object",
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["ClusterIssuer", "Issuer"] },
+                    "name": { "type": "string", "minLength": 1 }
+                  }
+                },
+                "extraDnsNames": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                "duration": { "type": "string", "pattern": "^([0-9]+h)?$" }
+              }
+            }
           }
         },
         "ingress": {

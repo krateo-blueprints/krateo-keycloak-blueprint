@@ -11,6 +11,24 @@ timestamp: 2026-08-11T00:00:00Z
 
 Curated history; release notes live in GitHub Releases.
 
+## 2026-11-11 — 0.2.6: Keycloak's own serving certificate; CRD ownership bridge
+
+**keycloak**: `keycloak.http.certificate` has cert-manager issue Keycloak's serving certificate into
+`keycloak.http.tlsSecretName`. Measured on GKE with krateo-private-ca 0.1.0: the request was approved
+by the CA's issuance policy, Keycloak served TLS on 8443 with it, and a client in another namespace
+that trusts only the published CA bundle got HTTP 200 with verification OK (issuer
+`https://keycloak-service.<ns>.svc.cluster.local:8443/realms/master`); the system trust store was
+refused.
+
+**keycloak-operator**: a post-install/post-upgrade Job stamps the release's Helm ownership on the two
+CRDs installed from `crds/`, so the release that renders them from `templates/` (0.3.0) can adopt
+them. Measured: 0.2.4 → templates/ directly fails with `invalid ownership metadata`; 0.2.4 → 0.2.6
+stamps both CRDs; 0.2.6 → templates/ adopts them (both in the release manifest, `keep`). A cluster
+must run 0.2.6 before 0.3.0.
+
+Also from 0.2.5 (2026-11-11): no `values.schema.json` key that `values.yaml` defaults is `required`,
+gated in lint.
+
 ## 2026-11-08 — `keycloak.hostname` is a full https URL (breaking)
 
 `keycloak.hostname` now takes a full base URL (`https://keycloak.example.com`) and the
