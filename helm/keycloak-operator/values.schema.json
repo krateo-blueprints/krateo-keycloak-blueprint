@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Keycloak Operator",
+  "description": "The vendored upstream Keycloak Operator: its Deployment, RBAC and the two Keycloak CRDs. The root stays OPEN, and `global` is declared explicitly: Krateo's chart-inspector injects Helm's reserved `global` key at install time, which a closed schema would reject.",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "description": "Helm's reserved global values, injected by the platform at install time."
+    },
+    "watchNamespaces": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Watched namespaces",
+      "description": "Namespace(s) the operator reconciles: one name, a comma-separated list, or JOSDK_WATCH_ALL for cluster-wide."
+    },
+    "image": {
+      "type": "object",
+      "title": "Operator image",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "keycloakImage": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Keycloak server image",
+      "description": "The Keycloak image the operator deploys for Keycloak CRs (upstream RELATED_IMAGE_KEYCLOAK)."
+    },
+    "startupProbe": {
+      "type": "object",
+      "title": "Operator startup probe",
+      "properties": {
+        "failureThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Raise on CPU- or memory-constrained nodes (upstream ships 3; 30 gives the operator ~5 minutes)."
+        }
+      }
+    }
+  }
+}
