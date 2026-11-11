@@ -48,6 +48,14 @@
           "description": "Raise on CPU- or memory-constrained nodes (upstream ships 3; 30 gives the operator ~5 minutes)."
         }
       }
+    },
+    "crdOwnershipBridge": {
+      "type": "object",
+      "description": "Post-install/post-upgrade Job stamping this release's Helm ownership on the two CRDs (the bridge to the release that renders them from templates/).",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

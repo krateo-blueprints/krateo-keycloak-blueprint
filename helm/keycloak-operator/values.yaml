@@ -25,3 +25,10 @@ keycloakImage: quay.io/keycloak/keycloak:26.6.3
 # Default keeps the upstream value (relaxation OFF).
 startupProbe:
   failureThreshold: 3
+
+# Stamps this release's Helm ownership on the two CRDs after every install and upgrade, so the
+# release that moves them into templates/ (0.3.0) can adopt them. Keep enabled; a cluster must run a
+# release with this bridge before upgrading to 0.3.0.
+crdOwnershipBridge:
+  enabled: true
+  image: registry.k8s.io/kubectl:v1.34.2

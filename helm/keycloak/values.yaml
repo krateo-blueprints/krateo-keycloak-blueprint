@@ -20,6 +20,18 @@ keycloak:
     # leave tlsSecret empty (and configure proxy headers).
     httpEnabled: true
     tlsSecretName: ""
+    # Have cert-manager issue Keycloak's serving certificate into tlsSecretName (which must then be
+    # set), e.g. from krateo-private-ca. The DNS names are the operator's Service names
+    # (<keycloak.name>-service.<namespace>.svc[.cluster.local]) plus any extra ones; the usages are a
+    # server leaf's, which is what a CertificateRequestPolicy for this service allows.
+    certificate:
+      enabled: false
+      issuerRef:
+        kind: ClusterIssuer
+        name: krateo-private-ca
+      extraDnsNames: []
+      # Empty = the issuer's default; set it when the issuer's policy bounds the duration.
+      duration: ""
 
   ingress:
     enabled: true

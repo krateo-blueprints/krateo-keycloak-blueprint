@@ -1,0 +1,35 @@
+{{- $c := .Values.keycloak.http.certificate }}
+{{- if $c.enabled }}
+{{- $secret := required "keycloak.http.tlsSecretName is required when keycloak.http.certificate.enabled (the Secret cert-manager writes and Keycloak serves)" .Values.keycloak.http.tlsSecretName }}
+{{- $svc := printf "%s-service" .Values.keycloak.name }}
+# Keycloak's serving certificate. The operator names the Keycloak Service <name>-service; these are
+# the names in-cluster clients (and the realm's issuer URL) use.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.keycloak.name }}-tls
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ $secret }}
+  dnsNames:
+    - {{ printf "%s.%s.svc" $svc .Release.Namespace }}
+    - {{ printf "%s.%s.svc.cluster.local" $svc .Release.Namespace }}
+    {{- range $c.extraDnsNames }}
+    - {{ . }}
+    {{- end }}
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  {{- with $c.duration }}
+  duration: {{ . }}
+  {{- end }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    group: cert-manager.io
+    kind: {{ $c.issuerRef.kind }}
+    name: {{ $c.issuerRef.name }}
+{{- end }}
