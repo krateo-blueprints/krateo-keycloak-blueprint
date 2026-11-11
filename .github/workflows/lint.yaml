@@ -44,6 +44,18 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 hack/check-bootstrap-password.py
 
+      # Gating. core-provider turns values.schema.json into the Composition CRD, so a `required` key
+      # becomes mandatory on every Composition CR, while values.yaml defaults only apply at render,
+      # after admission. Requiring a defaulted key therefore enforces nothing and makes any CR that
+      # omits it (or a partial parent object) uncreatable; on demo, keycloak 0.2.3's root
+      # `required: [keycloak, db]` froze all 108 components of the platform umbrella. The gate
+      # self-tests its detector on a mutant and a control before judging the real schemas.
+      - name: Gate values.schema.json (no `required` key that values.yaml defaults)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 hack/check-schema-required.py
+
       - name: helm template + lint every chart (informational)
         run: |
           set -uo pipefail
