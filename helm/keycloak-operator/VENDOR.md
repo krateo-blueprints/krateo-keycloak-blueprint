@@ -39,7 +39,7 @@ modifications above.
 ## CRD ownership bridge (0.2.6)
 
 `templates/crd-ownership-bridge.yaml` is not vendored: a post-install/post-upgrade Job
-(`registry.k8s.io/kubectl`, one `kubectl patch` per CRD, RBAC limited to `get`/`patch` on these two
+(`registry.k8s.io/kubectl`, pinned by tag and digest and kept within one minor of the target clusters, one `kubectl patch` per CRD, RBAC limited to `get`/`patch` on these two
 CRD names) stamps `app.kubernetes.io/managed-by: Helm` and the `meta.helm.sh/release-*` annotations
 on the CRDs above. `crds/` installs them without that metadata, and the release that moves them into
 `templates/` would otherwise fail Helm's ownership check; a pre-upgrade hook cannot fix that because
