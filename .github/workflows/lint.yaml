@@ -61,6 +61,14 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 hack/check-reuse-values.py
 
+      # keycloak-operator's CRDs are templates (Helm never upgrades crds/): the rendered CRDs must be the
+      # vendored upstream files plus helm.sh/resource-policy: keep, nothing else.
+      - name: Gate the operator CRDs (rendered from templates/, unchanged, kept)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 hack/check-operator-crds.py
+
       - name: Gate values.schema.json (no `required` key that values.yaml defaults)
         run: |
           set -euo pipefail

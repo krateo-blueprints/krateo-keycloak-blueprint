@@ -16,7 +16,7 @@ import shutil, subprocess, sys, tempfile
 from pathlib import Path
 import yaml
 
-CHARTS = {"helm/keycloak-operator": ["0.2.4", "0.2.5"]}
+CHARTS = {"helm/keycloak-operator": ["0.2.4", "0.2.5", "0.2.6", "0.2.7"]}
 SETS = {"helm/keycloak-operator": ["--set", "watchNamespaces=kcop"]}
 
 

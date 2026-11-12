@@ -25,12 +25,3 @@ keycloakImage: quay.io/keycloak/keycloak:26.6.3
 # Default keeps the upstream value (relaxation OFF).
 startupProbe:
   failureThreshold: 3
-
-# Stamps this release's Helm ownership on the two CRDs after every install and upgrade, so the
-# release that moves them into templates/ (0.3.0) can adopt them. Keep enabled; a cluster must run a
-# release with this bridge before upgrading to 0.3.0.
-crdOwnershipBridge:
-  enabled: true
-  # Tag AND digest. kubectl supports one minor of skew against the API server: keep this within one
-  # minor of the clusters it runs on (demo and the test clusters run 1.36).
-  image: registry.k8s.io/kubectl:v1.36.4@sha256:b8d523e7b8cdc5e3caa0f8891ee9f504abf137dec786e6e0ddd33e4f272c2f13

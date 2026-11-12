@@ -6,8 +6,8 @@ Everything here derives from **keycloak/keycloak-k8s-resources @ 26.6.3**:
 
 | file | upstream source | sha256 (upstream) |
 |---|---|---|
-| `crds/keycloaks.k8s.keycloak.org-v1.yml` | `keycloaks.k8s.keycloak.org-v1.yml` | `846783b8de418a5b…` |
-| `crds/keycloakrealmimports.k8s.keycloak.org-v1.yml` | `keycloakrealmimports.k8s.keycloak.org-v1.yml` | `4b2220309a91f04e…` |
+| `files/crds/keycloaks.k8s.keycloak.org-v1.yml` | `keycloaks.k8s.keycloak.org-v1.yml` | `846783b8de418a5b…` |
+| `files/crds/keycloakrealmimports.k8s.keycloak.org-v1.yml` | `keycloakrealmimports.k8s.keycloak.org-v1.yml` | `4b2220309a91f04e…` |
 | `templates/operator.yaml` | `kubernetes.yml` + the delta below | — |
 
 Both CRDs were verified **byte-identical** to upstream 26.6.3 on 2026-08-15.
@@ -36,12 +36,17 @@ child. It was reconstructed here after verifying its CRDs against upstream. Bump
 raising `appVersion`, re-fetching both CRDs at the new tag, and re-applying the two
 modifications above.
 
-## CRD ownership bridge (0.2.6)
+## The CRDs are rendered from templates/ (0.3.0)
 
-`templates/crd-ownership-bridge.yaml` is not vendored: a post-install/post-upgrade Job
-(`registry.k8s.io/kubectl`, pinned by tag and digest and kept within one minor of the target clusters, one `kubectl patch` per CRD, RBAC limited to `get`/`patch` on these two
-CRD names) stamps `app.kubernetes.io/managed-by: Helm` and the `meta.helm.sh/release-*` annotations
-on the CRDs above. `crds/` installs them without that metadata, and the release that moves them into
-`templates/` would otherwise fail Helm's ownership check; a pre-upgrade hook cannot fix that because
-Helm checks ownership before it runs pre-upgrade hooks.
+`templates/crds.yaml` is not vendored. It renders the two files under `files/crds/` as ordinary
+templates, so `helm upgrade` delivers CRD changes when the operator is bumped (a chart's `crds/`
+directory is installed once and never upgraded), and injects `helm.sh/resource-policy: keep` so an
+uninstall never deletes the CRDs and, with them, every Keycloak and KeycloakRealmImport in the
+cluster. The vendored files stay byte-identical to upstream; that annotation is the only change.
 
+0.2.6 and 0.2.7 carried a post-install/post-upgrade Job that stamped this release's Helm ownership on the CRDs
+`crds/` had installed without it. 0.3.0 removes it: Helm checks ownership before any hook runs, so
+the Job could never help the upgrade that needs it, and once the CRDs are templates Helm owns them
+itself. A cluster that installed the operator from `crds/` (0.2.5 or earlier) must therefore run 0.2.7
+(or 0.2.6) once before 0.3.0; a direct upgrade fails with Helm's `invalid ownership metadata` error and changes
+nothing.
