@@ -24,6 +24,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The reuse-values gate reads values.yaml at previous release tags.
+          fetch-depth: 0
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -50,6 +53,14 @@ jobs:
       # omits it (or a partial parent object) uncreatable; on demo, keycloak 0.2.3's root
       # `required: [keycloak, db]` froze all 108 components of the platform umbrella. The gate
       # self-tests its detector on a mutant and a control before judging the real schemas.
+      # `helm upgrade --reuse-values` uses the previous release's values and skips the new chart's
+      # values.yaml defaults: 0.2.6 failed it from 0.2.5 with a nil pointer. Render under old values.
+      - name: Gate --reuse-values upgrades (render under previous releases' values)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 hack/check-reuse-values.py
+
       - name: Gate values.schema.json (no `required` key that values.yaml defaults)
         run: |
           set -euo pipefail

@@ -1,4 +1,11 @@
-{{- if .Values.crdOwnershipBridge.enabled }}
+{{- /*
+`helm upgrade --reuse-values` from a release older than 0.2.6 reuses that release's values, which have
+no crdOwnershipBridge key, and does not apply this chart's values.yaml defaults: read the key with
+defaults here so that upgrade works (0.2.6 failed it with a nil pointer). Keep the default image equal to
+values.yaml's (CI checks both renders).
+*/ -}}
+{{- $bridge := mergeOverwrite (dict "enabled" true "image" "registry.k8s.io/kubectl:v1.36.4@sha256:b8d523e7b8cdc5e3caa0f8891ee9f504abf137dec786e6e0ddd33e4f272c2f13") (.Values.crdOwnershipBridge | default dict) }}
+{{- if $bridge.enabled }}
 {{- $name := printf "%s-crd-ownership" .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- $crds := list "keycloaks.k8s.keycloak.org" "keycloakrealmimports.k8s.keycloak.org" }}
 # BRIDGE to the release that installs these CRDs from templates/ (0.3.0). Today they come from
@@ -68,7 +75,7 @@ spec:
       containers:
         {{- range $i, $crd := $crds }}
         - name: stamp-{{ $i }}
-          image: {{ $.Values.crdOwnershipBridge.image }}
+          image: {{ $bridge.image }}
           args:
             - patch
             - customresourcedefinition
