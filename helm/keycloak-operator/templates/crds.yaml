@@ -1,0 +1,18 @@
+{{- /*
+The two upstream Keycloak CRDs, rendered as ordinary templates so `helm upgrade` delivers CRD
+changes. (A chart's crds/ directory is installed once and NEVER upgraded by helm, so a future
+operator bump that changes a CRD would silently not reach a cluster that already had it.)
+
+`helm.sh/resource-policy: keep` is injected so an uninstall never deletes the CRDs, and with them
+every Keycloak and KeycloakRealmImport CR in the cluster.
+
+The vendored files under files/crds/ stay byte-identical to upstream (see VENDOR.md); the only
+modification, the annotation, is made here.
+*/ -}}
+{{- range $path, $_ := .Files.Glob "files/crds/*.yml" }}
+{{- $crd := $.Files.Get $path | fromYaml }}
+{{- $annotations := merge (dict "helm.sh/resource-policy" "keep") ($crd.metadata.annotations | default dict) }}
+{{- $_ := set $crd.metadata "annotations" $annotations }}
+---
+{{ toYaml $crd }}
+{{- end }}

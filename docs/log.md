@@ -11,6 +11,16 @@ timestamp: 2026-08-11T00:00:00Z
 
 Curated history; release notes live in GitHub Releases.
 
+## 2026-11-12 — 0.3.0: keycloak-operator's CRDs ship from templates/
+
+**keycloak-operator**: the two Keycloak CRDs move from `crds/` to `files/crds/` and are rendered by
+`templates/crds.yaml` with `helm.sh/resource-policy: keep`, so `helm upgrade` delivers CRD changes and
+an uninstall never deletes them. The vendored files stay byte-identical to upstream. The 0.2.6
+ownership-bridge Job is removed: Helm owns the CRDs once they are templates, and the Job could never
+help a direct upgrade (Helm checks ownership before hooks). Upgrade path from 0.2.5 or earlier: 0.2.7,
+then 0.3.0 (0.2.7 also works with `--reuse-values`; 0.2.6 did not). CI gate `hack/check-operator-crds.py`: no `crds/` directory, rendered CRDs equal the
+vendored files plus `keep`, files match VENDOR.md's upstream sha256.
+
 ## 2026-11-12 — 0.2.7: the CRD bridge survives `helm upgrade --reuse-values`
 
 **keycloak-operator**: `helm upgrade --reuse-values` from 0.2.5 (or 0.2.4) to 0.2.6 failed with

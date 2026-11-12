@@ -16,20 +16,25 @@ cluster-scoped and installed once.
 
 ### Keycloak Operator
 
+This repo's `keycloak-operator` chart vendors the upstream operator (keycloak-k8s-resources 26.6.3,
+see `helm/keycloak-operator/VENDOR.md`) with its two CRDs:
+
 ```console
-$ VER=26.6.3   # any keycloak-k8s-resources tag; matches operator.version
-$ kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/$VER/kubernetes/keycloaks.k8s.keycloak.org-v1.yml
-$ kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/$VER/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml
-$ kubectl apply -n keycloak-system -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/$VER/kubernetes/kubernetes.yml
+$ helm install keycloak-operator oci://ghcr.io/krateo-blueprints/charts/keycloak-operator \
+    --version X.Y.Z -n keycloak-system --create-namespace --set watchNamespaces=keycloak-system
 ```
 
-See <https://www.keycloak.org/operator/installation> for the exact per-release URLs.
-Verified end-to-end on kind with operator 26.6.3.
+Since 0.3.0 the CRDs (`keycloaks.k8s.keycloak.org`, `keycloakrealmimports.k8s.keycloak.org`) are
+rendered from `templates/`, so `helm upgrade` delivers their changes when the operator is bumped (Helm
+never upgrades a chart's `crds/` directory), and they carry `helm.sh/resource-policy: keep`: uninstalling
+the chart leaves them, and every Keycloak in the cluster, in place.
 
-**Upgrading `keycloak-operator` from 0.2.5 or earlier with `--reuse-values`: use 0.2.7, not 0.2.6.**
-0.2.6's bridge Job template read a value that 0.2.5's values do not carry, and `--reuse-values` does
-not apply the new chart's defaults, so that upgrade failed with a nil pointer. 0.2.7 reads it with
-defaults; CI renders each chart under its previous releases' values.
+**Upgrading from 0.2.5 or earlier: go through 0.2.7 first.** Those releases installed the CRDs from
+`crds/` without Helm's ownership metadata; 0.2.7 stamps it (a post-upgrade Job), and 0.3.0 then adopts
+the CRDs. A direct upgrade from 0.2.5 fails with Helm's `invalid ownership metadata` error and changes
+nothing. A cluster already on 0.2.6 (demo) can go straight to 0.3.0. Use 0.2.7, not 0.2.6, for that
+step: 0.2.6's bridge template read a value 0.2.5's values do not carry, and `helm upgrade
+--reuse-values` does not apply the new chart's defaults, so it failed with a nil pointer.
 
 ### CloudNativePG (default `db.provider`)
 
@@ -121,4 +126,6 @@ $ helm -n keycloak-system uninstall keycloak     # also removes the CNPG Cluster
 ```
 
 Or delete the composition CR if you deployed through Krateo. The operators, being
-cluster prerequisites, are removed separately.
+cluster prerequisites, are removed separately. Uninstalling `keycloak-operator` (0.3.0 and later)
+leaves its two CRDs: delete them by hand only to remove Keycloak from the cluster for good, since that
+deletes every Keycloak and KeycloakRealmImport.
