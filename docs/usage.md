@@ -26,6 +26,11 @@ $ kubectl apply -n keycloak-system -f https://raw.githubusercontent.com/keycloak
 See <https://www.keycloak.org/operator/installation> for the exact per-release URLs.
 Verified end-to-end on kind with operator 26.6.3.
 
+**Upgrading `keycloak-operator` from 0.2.5 or earlier with `--reuse-values`: use 0.2.7, not 0.2.6.**
+0.2.6's bridge Job template read a value that 0.2.5's values do not carry, and `--reuse-values` does
+not apply the new chart's defaults, so that upgrade failed with a nil pointer. 0.2.7 reads it with
+defaults; CI renders each chart under its previous releases' values.
+
 ### CloudNativePG (default `db.provider`)
 
 With the default `db.provider: cloudnativepg`, the CNPG operator must also be installed

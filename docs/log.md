@@ -11,6 +11,15 @@ timestamp: 2026-08-11T00:00:00Z
 
 Curated history; release notes live in GitHub Releases.
 
+## 2026-11-12 — 0.2.7: the CRD bridge survives `helm upgrade --reuse-values`
+
+**keycloak-operator**: `helm upgrade --reuse-values` from 0.2.5 (or 0.2.4) to 0.2.6 failed with
+`nil pointer evaluating interface {}.enabled`: reuse-values upgrades with the previous release's
+values, which have no `crdOwnershipBridge`, and does not apply the new chart's defaults. Measured on GKE
+while validating 0.3.0. The bridge template now reads the key with defaults (enabled, the same pinned
+kubectl image). CI gate `hack/check-reuse-values.py` renders each chart with its values.yaml replaced
+by a previous release's, the reuse-values shape, and requires the same objects as a default render.
+
 ## 2026-11-11 — 0.2.6: Keycloak's own serving certificate; CRD ownership bridge
 
 **keycloak**: `keycloak.http.certificate` has cert-manager issue Keycloak's serving certificate into
