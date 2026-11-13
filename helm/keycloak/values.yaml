@@ -20,6 +20,14 @@ keycloak:
     # leave tlsSecret empty (and configure proxy headers).
     httpEnabled: true
     tlsSecretName: ""
+    # Serve Keycloak under a path prefix instead of at the root (Keycloak's http-relative-path), for a
+    # gateway that exposes several components on one host at per-component paths. Empty = the root.
+    # Starts with "/", no trailing slash, e.g. /keycloak. `hostname` must then end with the same path
+    # (e.g. https://portal.example.com/keycloak): Keycloak builds the token issuer from `hostname`, so
+    # the issuer is <hostname>/realms/<realm> and stays the same whatever path a request came in on.
+    # Route <prefix>/realms/ and <prefix>/resources/ to the Service without rewriting the path; the
+    # admin console (<prefix>/admin/) is reached in-cluster and need not be exposed.
+    relativePath: ""
     # Have cert-manager issue Keycloak's serving certificate into tlsSecretName (which must then be
     # set), e.g. from krateo-private-ca. The DNS names are the operator's Service names
     # (<keycloak.name>-service.<namespace>.svc[.cluster.local]) plus any extra ones; the usages are a

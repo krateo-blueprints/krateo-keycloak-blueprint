@@ -58,7 +58,23 @@ spec:
       secret: {{ .Values.bootstrapAdmin.service.secret.name }}
     {{- end }}
   {{- end }}
-  {{- with .Values.keycloak.additionalOptions }}
+  {{- $rp := .Values.keycloak.http.relativePath | default "" }}
+  {{- $opts := .Values.keycloak.additionalOptions | default list }}
+  {{- range $opts }}
+  {{- if eq (toString .name) "http-relative-path" }}
+  {{- fail "keycloak.additionalOptions: set the path prefix with keycloak.http.relativePath, not an http-relative-path option (the chart checks it against keycloak.hostname, which builds the token issuer)" }}
+  {{- end }}
+  {{- end }}
+  {{- if $rp }}
+  {{- if or (not (hasPrefix "/" $rp)) (hasSuffix "/" $rp) }}
+  {{- fail (printf "keycloak.http.relativePath %q must start with \"/\" and must not end with \"/\" (e.g. /keycloak)" $rp) }}
+  {{- end }}
+  {{- if not (hasSuffix $rp (.Values.keycloak.hostname | trimSuffix "/")) }}
+  {{- fail (printf "keycloak.hostname %q must end with keycloak.http.relativePath %q (e.g. https://portal.example.com%s): Keycloak builds the token issuer from hostname, and serves under the relative path" .Values.keycloak.hostname $rp $rp) }}
+  {{- end }}
+  {{- $opts = append $opts (dict "name" "http-relative-path" "value" $rp) }}
+  {{- end }}
+  {{- with $opts }}
   additionalOptions:
     {{- toYaml . | nindent 4 }}
   {{- end }}
