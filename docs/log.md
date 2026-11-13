@@ -11,6 +11,20 @@ timestamp: 2026-08-11T00:00:00Z
 
 Curated history; release notes live in GitHub Releases.
 
+## 2026-11-13 — 0.4.0: Keycloak under a path prefix (`keycloak.http.relativePath`)
+
+For a gateway that exposes the platform on one host at per-component paths (the installer's path-mode
+exposure on krateo-057, where no Keycloak subdomain is available), the keycloak chart can serve Keycloak
+under a prefix: `keycloak.http.relativePath` renders Keycloak's `http-relative-path` (the operator CRD
+has no native field). The render refuses unless `keycloak.hostname` ends with the same path, because
+Keycloak builds the issuer from `hostname`; a mismatch would mint tokens whose issuer the gateway does
+not serve, failing as an authentication error. `http-relative-path` through `additionalOptions` is
+refused in favour of the key. Measured on a disposable GKE cluster (keycloak-operator 0.3.0, CNPG
+0.29.1, Keycloak 26.6.3, relativePath `/keycloak`): discovery under `/keycloak` 200, root 404, issuer
+`https://portal.example.test/keycloak/realms/master`, operator probes moved to `/keycloak/health/ready`
+on 9000. CI gate `hack/check-relative-path.py`. New key, default empty, so existing installs render
+unchanged.
+
 ## 2026-11-12 — 0.3.0: keycloak-operator's CRDs ship from templates/
 
 **keycloak-operator**: the two Keycloak CRDs move from `crds/` to `files/crds/` and are rendered by

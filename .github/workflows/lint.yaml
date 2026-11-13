@@ -69,6 +69,14 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 hack/check-operator-crds.py
 
+      # keycloak.http.relativePath: hostname builds the issuer, the relative path is where Keycloak serves;
+      # the chart refuses a mismatch, and this keeps that refusal and the rendering from regressing.
+      - name: Gate keycloak.http.relativePath (hack/check-relative-path.py)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyyaml
+          python3 hack/check-relative-path.py
+
       - name: Gate values.schema.json (no `required` key that values.yaml defaults)
         run: |
           set -euo pipefail

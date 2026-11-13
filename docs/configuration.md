@@ -24,6 +24,7 @@ double as the CR field reference.
 | `keycloak.image` | `""` | pin a specific Keycloak image; empty uses the operator's pinned default. |
 | `keycloak.http.httpEnabled` | `true` | allow plain HTTP (`spec.http.httpEnabled`). Set `true` when an ingress/Gateway terminates TLS upstream. |
 | `keycloak.http.tlsSecretName` | `""` | a cert Secret to terminate TLS **at** Keycloak (`spec.http.tlsSecret`). Leave empty when TLS is terminated in front. |
+| `keycloak.http.relativePath` | `""` | serve Keycloak under a path prefix (Keycloak's `http-relative-path`, rendered into `spec.additionalOptions`), e.g. `/keycloak`, for a gateway that exposes several components on one host at per-component paths. Starts with `/`, no trailing slash; `keycloak.hostname` must end with the same path (the render refuses otherwise), and setting `http-relative-path` through `additionalOptions` is refused. |
 | `keycloak.http.certificate.enabled` | `false` | have cert-manager issue Keycloak's serving certificate into `tlsSecretName` (which must then be set). DNS names: `<keycloak.name>-service.<namespace>.svc` and `.svc.cluster.local`, plus `extraDnsNames`; usages of a server leaf; ECDSA P-256, key rotated on renewal. |
 | `keycloak.http.certificate.issuerRef.{kind,name}` | `ClusterIssuer` / `krateo-private-ca` | the issuer, e.g. [krateo-private-ca](https://github.com/krateo-blueprints/krateo-private-ca), whose issuance policy must allow those names from this namespace. |
 | `keycloak.http.certificate.extraDnsNames` | `[]` | additional DNS names. |
@@ -120,6 +121,14 @@ warning when the Secret still holds it. Change the admin password in the console
   Keystone/Horizon) is hostname-sensitive; a token minted against one issuer fails
   elsewhere. A bare host is refused by the schema: behind a TLS-terminating proxy that
   does not send `X-Forwarded-Proto`, it made Keycloak advertise an `http://` issuer.
+- **A path prefix is set once, in `keycloak.http.relativePath`, and `hostname` carries it.** With
+  `relativePath: /keycloak` and `hostname: https://portal.example.com/keycloak`, Keycloak serves only
+  under `/keycloak` (the root answers 404), the issuer is `https://portal.example.com/keycloak/realms/<realm>`
+  whatever path a request arrives on, and the operator moves its probes to `/keycloak/health/*` on the
+  management port (measured on GKE with keycloak-operator 0.3.0 and Keycloak 26.6.3). Route
+  `<prefix>/realms/` and `<prefix>/resources/` to the Service **without** rewriting the path; the admin
+  console (`<prefix>/admin/`) is reached in-cluster and need not be exposed. In-cluster callers use the
+  prefix too, e.g. keycloak-config-kog's `keycloak.baseUrl` `http://keycloak-service.<ns>.svc.cluster.local:8080/keycloak`.
 - **Set `hostname-strict=false` when in-cluster callers use the Service name.** Add it
   via `keycloak.additionalOptions` so the config KOG can reach the server by its
   in-cluster Service rather than the public hostname.

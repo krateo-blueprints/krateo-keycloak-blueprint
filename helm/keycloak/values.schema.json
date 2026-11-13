@@ -15,6 +15,7 @@
           "properties": {
             "httpEnabled": { "type": "boolean" },
             "tlsSecretName": { "type": "string" },
+            "relativePath": { "type": "string", "pattern": "^(/[^?#\\s]*[^/?#\\s])?$", "description": "Serve Keycloak under a path prefix (Keycloak's http-relative-path), e.g. /keycloak: starts with /, no trailing slash; keycloak.hostname must then end with it. Empty = the root." },
             "certificate": {
               "type": "object",
               "properties": {
