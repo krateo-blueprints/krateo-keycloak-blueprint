@@ -11,6 +11,23 @@ timestamp: 2026-08-11T00:00:00Z
 
 Curated history; release notes live in GitHub Releases.
 
+## 2026-11-15 — keycloak: opt-in CNPG volume-snapshot backups; reuse-values gate covers every release
+
+**keycloak**: `db.cloudnativepg.backup.volumeSnapshot.className` renders the Cluster's
+`spec.backup.volumeSnapshot.className`, so a CNPG `Backup` with `method: volumeSnapshot` can snapshot the
+Keycloak database and a new Cluster can restore from it. Empty (the default) renders nothing, so existing
+installs are unchanged. The path was measured on a disposable GKE cluster (CNPG 1.30.1, a
+`pd.csi.storage.gke.io` VolumeSnapshotClass) with the same field set by hand on a Cluster this chart
+rendered: the Backup completed, the restored Cluster held the same users (IDs read from both databases),
+and a later `helm upgrade` of this chart kept the hand-set field. With the value, the chart owns the field
+instead of leaving an out-of-band patch on a Helm-owned object. The key is read with `dig`, so an upgrade
+with `--reuse-values` from a release without it renders unchanged.
+
+**CI**: `hack/check-reuse-values.py` listed keycloak-operator's releases by hand up to 0.2.7 and never
+checked the `keycloak` chart. It now reads every plain-SemVer release tag from git for both charts (from
+0.2.4), so a release is covered when it is tagged, and fails loudly on a checkout without tags. Both charts
+render the same objects under every release's values (0.2.4 to 0.4.0).
+
 ## 2026-11-13 — 0.4.0: Keycloak under a path prefix (`keycloak.http.relativePath`)
 
 For a gateway that exposes the platform on one host at per-component paths (the installer's path-mode

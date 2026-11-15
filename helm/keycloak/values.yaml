@@ -76,6 +76,14 @@ db:
     storage:
       size: 1Gi
       storageClass: ""      # "" = cluster default
+    # Volume-snapshot backups of the database (CNPG backup method volumeSnapshot). Set className to
+    # an existing VolumeSnapshotClass for the cluster's CSI driver (on GKE: driver
+    # pd.csi.storage.gke.io); then a CNPG `Backup` with `method: volumeSnapshot` snapshots the PVC,
+    # and a new Cluster restores from it (bootstrap.recovery.volumeSnapshots). The class is cluster
+    # infrastructure and is not rendered here. "" = no backup configuration (the default).
+    backup:
+      volumeSnapshot:
+        className: ""
 
   # --- external mode ---
   host: keycloak-postgres

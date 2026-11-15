@@ -24,6 +24,15 @@ spec:
     {{- with .Values.db.cloudnativepg.storage.storageClass }}
     storageClass: {{ . | quote }}
     {{- end }}
+  {{- /* Opt-in volume-snapshot backups (CNPG method volumeSnapshot): a `Backup` with
+       method volumeSnapshot then snapshots the PVC through this VolumeSnapshotClass, and a new
+       Cluster restores from it with bootstrap.recovery.volumeSnapshots. Read with dig so an upgrade
+       with --reuse-values from a release without the key renders unchanged. */ -}}
+  {{- with dig "backup" "volumeSnapshot" "className" "" .Values.db.cloudnativepg }}
+  backup:
+    volumeSnapshot:
+      className: {{ . | quote }}
+  {{- end }}
   bootstrap:
     initdb:
       database: {{ .Values.db.database }}

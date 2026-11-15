@@ -70,6 +70,17 @@
                 "size": { "type": "string" },
                 "storageClass": { "type": "string" }
               }
+            },
+            "backup": {
+              "type": "object",
+              "properties": {
+                "volumeSnapshot": {
+                  "type": "object",
+                  "properties": {
+                    "className": { "type": "string", "description": "VolumeSnapshotClass for CNPG volume-snapshot backups of the database (e.g. a pd.csi.storage.gke.io class on GKE). Empty = no backup configuration. The class itself is cluster infrastructure, not rendered by this chart." }
+                  }
+                }
+              }
             }
           }
         },
