@@ -56,6 +56,7 @@ publishes.
 | `db.cloudnativepg.imageName` | `""` | pin a Postgres image (e.g. `ghcr.io/cloudnative-pg/postgresql:17`); empty uses the CNPG default. |
 | `db.cloudnativepg.storage.size` | `1Gi` | PVC size. |
 | `db.cloudnativepg.storage.storageClass` | `""` | storage class; empty uses the cluster default. |
+| `db.cloudnativepg.backup.volumeSnapshot.className` | `""` | a VolumeSnapshotClass for CNPG volume-snapshot backups of the database (GKE: driver `pd.csi.storage.gke.io`). Set it, then a CNPG `Backup` with `method: volumeSnapshot` snapshots the PVC and a new Cluster restores from it (`bootstrap.recovery.volumeSnapshots`). The class is cluster infrastructure, not rendered here. Empty renders no backup configuration. |
 
 ### `external` mode (`db.host`, `db.port`, `db.secret.*`)
 

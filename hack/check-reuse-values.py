@@ -6,7 +6,8 @@ WHY. With --reuse-values Helm upgrades using the PREVIOUS release's values and d
 chart's values.yaml defaults. A template that reads a key added since then (e.g. 0.2.6's
 `.Values.crdOwnershipBridge.enabled`) fails with a nil pointer, and the upgrade aborts.
 
-WHAT. For each chart and each previous semver tag listed below, render the chart with its values.yaml
+WHAT. For each chart and EVERY plain-SemVer release tag from its FIRST_TAG on (read from git, so a release
+is covered the moment it is tagged; a hard-coded list stopped at 0.2.7 and never covered helm/keycloak), render the chart with its values.yaml
 REPLACED by that tag's values.yaml (exactly the reuse-values shape), and require success. The render
 with the chart's own defaults must produce the same kinds, so a defaulted key cannot silently switch a
 feature off under reuse-values either.
@@ -16,8 +17,23 @@ import shutil, subprocess, sys, tempfile
 from pathlib import Path
 import yaml
 
-CHARTS = {"helm/keycloak-operator": ["0.2.4", "0.2.5", "0.2.6", "0.2.7"]}
+# Oldest release a --reuse-values upgrade is supported from, per chart.
+FIRST_TAG = {"helm/keycloak-operator": "0.2.4", "helm/keycloak": "0.2.4"}
 SETS = {"helm/keycloak-operator": ["--set", "watchNamespaces=kcop"]}
+
+
+def release_tags(first):
+    out = subprocess.run(["git", "tag", "-l"], capture_output=True, text=True, check=True).stdout.split()
+    semver = [t for t in out if t.count(".") == 2 and all(p.isdigit() for p in t.split("."))]
+    key = lambda t: tuple(int(p) for p in t.split("."))
+    tags = sorted((t for t in semver if key(t) >= key(first)), key=key)
+    if not tags or tags[0] != first:
+        # No tags (a shallow checkout) must fail loudly, never pass with nothing checked.
+        sys.exit(f"::error::release tags not found (need {first} and later; is the checkout shallow? fetch-depth: 0)")
+    return tags
+
+
+CHARTS = {chart: release_tags(first) for chart, first in FIRST_TAG.items()}
 
 
 def render(chart, values_text, extra_template=None):
