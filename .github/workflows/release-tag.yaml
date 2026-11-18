@@ -252,7 +252,7 @@ jobs:
       # with the login above and REGISTRY_USERNAME/REGISTRY_PASSWORD for its manifest read-back.
       - name: Locate the organisation's chart push
         id: chartpush
-        uses: krateo-platformops/.github/.github/actions/chart-push@fb91b76eb585cdd2f148abfbfb6d14e05bcbacb4 # main 2026-11-18
+        uses: krateo-platformops/.github/.github/actions/chart-push@5f126b7d93ec5302eb9cc57a3af157550175fbaf # main 2026-11-18
       - name: Push every chart to GHCR
         env:
           REGISTRY_USERNAME: ${{ github.actor }}
