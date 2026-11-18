@@ -338,7 +338,7 @@ jobs:
     needs: package-and-push
     permissions:
       contents: read
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1e6210ab2a8b66ff1a8d6da86287e671154f44a2 # 1.0.4
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@aea92de356085f50ea45477a4e6ae2b026cd6b14 # 1.4.2
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -351,7 +351,7 @@ jobs:
     needs: package-and-push
     permissions:
       contents: read
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@1e6210ab2a8b66ff1a8d6da86287e671154f44a2 # 1.0.4
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@aea92de356085f50ea45477a4e6ae2b026cd6b14 # 1.4.2
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
