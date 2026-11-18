@@ -247,18 +247,23 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
 
-      # hack/push-chart.sh: helm push, surviving GHCR's tag read-after-write race (and only that) by tagging the same
-      # digest once the registry serves it (seen on keycloak-config-kog 0.11.0 and rabbitmq-operator-blueprint).
+      # GHCR's tag read-after-write race is retried (on the same digest, and nothing else) by the organisation's
+      # chart-push action. Locate mode: it outputs the path of its push.sh, which the loop below runs once per chart,
+      # with the login above and REGISTRY_USERNAME/REGISTRY_PASSWORD for its manifest read-back.
+      - name: Locate the organisation's chart push
+        id: chartpush
+        uses: krateo-platformops/.github/.github/actions/chart-push@fb91b76eb585cdd2f148abfbfb6d14e05bcbacb4 # main 2026-11-18
       - name: Push every chart to GHCR
         env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USERNAME: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+          PUSH_SH: ${{ steps.chartpush.outputs.path }}
         run: |
           set -euo pipefail
           # Every chart, indexed or not, exactly as before. A push never changes a package's
           # visibility: a private package stays private.
           for tgz in dist/*.tgz; do
-            bash hack/push-chart.sh "$tgz" "${OCI_REPO}"
+            bash "$PUSH_SH" "$tgz" "${OCI_REPO}"
             echo "Published ${OCI_REPO}/$(basename "$tgz" .tgz)"
           done
 
