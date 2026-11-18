@@ -38,6 +38,11 @@ jobs:
       # Gating. release-tag attaches the stamped CompositionDefinition to a release that release-notes
       # may create concurrently; the publisher must treat "already exists" as success and still fail on
       # anything else. Runs against a stand-in gh, no network.
+      # Stand-in helm and curl: the race retried on the same digest once served; near misses, a never-served digest,
+      # a moved digest and a wrong body fail; mutants of the script; no bare `helm push` in any workflow.
+      - name: Charts are pushed through hack/push-chart.sh, which retries GHCR's tag race and nothing else
+        run: python3 hack/validate-push-chart.py .
+
       - name: Release asset publisher survives the release-notes race (hack/test-publish-release-assets.sh)
         run: bash hack/test-publish-release-assets.sh
 

@@ -247,19 +247,18 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
 
+      # hack/push-chart.sh: helm push, surviving GHCR's tag read-after-write race (and only that) by tagging the same
+      # digest once the registry serves it (seen on keycloak-config-kog 0.11.0 and rabbitmq-operator-blueprint).
       - name: Push every chart to GHCR
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # Every chart, indexed or not, exactly as before. A push never changes a package's
           # visibility: a private package stays private.
           for tgz in dist/*.tgz; do
-            pushed=""
-            for attempt in 1 2 3; do
-              if helm push "$tgz" "${OCI_REPO}"; then pushed=yes; break; fi
-              echo "::warning::helm push $(basename "$tgz") failed (attempt ${attempt}/3); retrying"
-              sleep $(( attempt * 10 ))
-            done
-            [ -n "$pushed" ] || { echo "::error::helm push $(basename "$tgz") failed after 3 attempts"; exit 1; }
+            bash hack/push-chart.sh "$tgz" "${OCI_REPO}"
             echo "Published ${OCI_REPO}/$(basename "$tgz" .tgz)"
           done
 
