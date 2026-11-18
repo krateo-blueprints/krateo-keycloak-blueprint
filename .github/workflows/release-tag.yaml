@@ -100,8 +100,20 @@ jobs:
           fi
           echo "CHARTS_PUBLISH_TOKEN can write to krateo-blueprints/charts"
 
+  # PUBLISHING.md rule 12: the organisation's release preflight, before anything is stamped, pushed, indexed or
+  # released. It refuses a version that is not a plain X.Y.Z (rule 13's pattern, which publish-chart only applies
+  # at index time, after the push) and runs hack/release-preflight if this repository ever adds one.
+  release-preflight:
+    uses: krateo-blueprints/charts/.github/workflows/release-preflight.yaml@70095ab05f1c5dc6c8dd39d0b1fdbbc7382a841c # 1.4.3
+    permissions:
+      contents: read
+    with:
+      version: ${{ github.ref_name }}
+
   package-and-push:
-    needs: preflight
+    needs:
+      - preflight
+      - release-preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -338,7 +350,7 @@ jobs:
     needs: package-and-push
     permissions:
       contents: read
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@aea92de356085f50ea45477a4e6ae2b026cd6b14 # 1.4.2
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@70095ab05f1c5dc6c8dd39d0b1fdbbc7382a841c # 1.4.3
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
@@ -351,7 +363,7 @@ jobs:
     needs: package-and-push
     permissions:
       contents: read
-    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@aea92de356085f50ea45477a4e6ae2b026cd6b14 # 1.4.2
+    uses: krateo-blueprints/charts/.github/workflows/publish-chart.yaml@70095ab05f1c5dc6c8dd39d0b1fdbbc7382a841c # 1.4.3
     with:
       source_repo: ${{ github.repository }}
       git_tag: ${{ github.ref_name }}
