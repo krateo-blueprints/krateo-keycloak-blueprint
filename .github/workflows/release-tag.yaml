@@ -320,9 +320,10 @@ jobs:
           if [ ${#assets[@]} -eq 0 ]; then
             echo "no CompositionDefinition to publish"; exit 0
           fi
-          gh release view "${VERSION}" >/dev/null 2>&1 \
-            || gh release create "${VERSION}" --title "${VERSION}" --notes "keycloak ${VERSION}. Apply the attached CompositionDefinition to register this version."
-          gh release upload "${VERSION}" "${assets[@]}" --clobber
+          # Not `view || create`: release-notes creates the same release on the same tag push, and losing
+          # that race failed glance-kog 0.1.2 (422 "already exists"). The script treats a concurrent create
+          # as success and still fails on any other error (hack/test-publish-release-assets.sh).
+          RELEASE_NOTES="keycloak ${VERSION}. Apply the attached CompositionDefinition to register this version." bash hack/publish-release-assets.sh "${VERSION}" "${assets[@]}"
           echo "attached: ${assets[*]}"
 
   # The Marketplace reads https://krateo-blueprints.github.io/charts/<channel>/index.yaml. The
