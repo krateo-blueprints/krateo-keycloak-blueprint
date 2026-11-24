@@ -112,7 +112,7 @@ Once the server is Ready, wire up its configuration half:
    `manage-realm`, `manage-users`, …). The bootstrap admin can create it, or — nicely
    circular — a one-off `KeycloakClient` CR once the KOG is up against the master realm.
 2. Put its client secret in the `keycloak-kog-client` Secret that
-   `krateo-keycloak-operator-kog`'s ESO `Webhook` generator reads.
+   `keycloak-provider-kog`'s ESO `Webhook` generator reads.
 3. Point the config KOG's `keycloak.baseUrl` at this server's hostname (or its in-cluster
    Service when `hostname-strict=false`).
 

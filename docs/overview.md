@@ -18,7 +18,7 @@ decisions define it.
 backing store, and the operator reconciles them into a running StatefulSet, Service and
 ingress. It does **not** touch the server's *configuration* — realms, clients, protocol
 mappers, groups — which are managed separately, as their own Kubernetes CRs, by the
-sibling `krateo-keycloak-operator-kog`. Keeping two systems from owning the same realm
+sibling `keycloak-provider-kog`. Keeping two systems from owning the same realm
 is deliberate; the two connect at exactly one point, a bearer-token Secret the KOG uses
 to call the server this blueprint stands up (see `docs/ARCHITECTURE.md`).
 
@@ -84,7 +84,7 @@ apiVersion group version. See [api](./api.md) for the full CRD surface.
 it into the `Keycloak` CR's `spec.bootstrapAdmin`. That first admin exists so a human —
 or, circularly, a one-off KOG CR against the master realm — can create the confidential
 `krateo-kog` service-account client the config KOG needs, then hand its client secret to
-`krateo-keycloak-operator-kog`. From there the KOG manages realms/clients/mappers
+`keycloak-provider-kog`. From there the KOG manages realms/clients/mappers
 declaratively. The full SSO chain (Krateo portal + OpenStack Horizon riding one shared
 Keycloak session) is laid out in `docs/ARCHITECTURE.md` and walked end-to-end in
 `QUICKSTART.md`.

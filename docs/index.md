@@ -19,7 +19,7 @@ one composition, one running identity server.
 
 This is the **lifecycle** half of the Keycloak work: it stands the server up and keeps
 it running. The **configuration** half — realms, clients, mappers and groups as
-Kubernetes CRs — lives in the sibling `krateo-keycloak-operator-kog`. The blueprint
+Kubernetes CRs — lives in the sibling `keycloak-provider-kog`. The blueprint
 deliberately bundles neither operator (Keycloak or CloudNativePG); both are cluster
 prerequisites installed once.
 
