@@ -4,7 +4,7 @@ Krateo blueprint that deploys and manages a **Keycloak server** through the **of
 Keycloak Operator** (`k8s.keycloak.org/v2alpha1`), backed by a CloudNativePG or external
 Postgres. This is the **lifecycle** half of the Keycloak work; the **configuration** half
 (realms, clients, mappers as CRs) is the sibling
-[`krateo-keycloak-operator-kog`](https://github.com/krateo-blueprints/krateo-keycloak-operator-kog).
+[`keycloak-provider-kog`](https://github.com/krateo-blueprints/keycloak-provider-kog).
 
 ## What is this
 

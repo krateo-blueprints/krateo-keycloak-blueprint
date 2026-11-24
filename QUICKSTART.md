@@ -6,7 +6,7 @@ This walks the full path end-to-end:
    ([krateo-keycloak-blueprint](https://github.com/krateo-blueprints/krateo-keycloak-blueprint),
    CloudNativePG-backed), then
 2. manage its configuration as **Kubernetes custom resources** with the KOG
-   ([krateo-keycloak-operator-kog](https://github.com/krateo-blueprints/krateo-keycloak-operator-kog)).
+   ([keycloak-provider-kog](https://github.com/krateo-blueprints/keycloak-provider-kog)).
 
 Every command here was validated on a local `kind` cluster (Keycloak Operator
 26.6.3, CloudNativePG 1.29.1, oasgen-provider 0.10).
@@ -138,8 +138,7 @@ rotate a fresh token into `keycloak-admin-token` automatically (validated on ESO
 ## 4. Install the config KOG
 
 ```bash
-git clone https://github.com/krateo-blueprints/krateo-keycloak-operator-kog
-helm install keycloak-config-kog ./krateo-keycloak-operator-kog/chart -n krateo-system \
+helm install keycloak-config-kog oci://ghcr.io/krateo-blueprints/charts/keycloak-config-kog -n krateo-system \
   --set keycloak.baseUrl=http://keycloak-service.keycloak-system.svc.cluster.local:8080 \
   --set auth.externalSecret.enabled=false   # using the manual token from step 3a
 ```

@@ -129,6 +129,6 @@ The CNPG operator must be installed cluster-wide ([usage](./usage.md)).
   operator are cluster prerequisites installed once, not chart-rendered
   ([usage](./usage.md)). `operator.install` is a convenience flag defaulting to `false`.
 - **Realms, clients, mappers, groups** — the server's *configuration* is managed as
-  separate CRs by `krateo-keycloak-operator-kog` (`keycloak.ogen.krateo.io/v1alpha1`),
+  separate CRs by `keycloak-provider-kog` (`keycloak.ogen.krateo.io/v1alpha1`),
   not by this blueprint. See `docs/ARCHITECTURE.md` for the split and `QUICKSTART.md` for
   those CR shapes.
